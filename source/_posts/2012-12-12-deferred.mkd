@@ -1,0 +1,236 @@
+---
+layout: post
+title: "jQuery Deferred の使い方がよくわからない"
+date: 2012-12-12
+comments: true
+categories:
+---
+jQuery Deferred の使い方がよくわからないので、まったく今更なのですが調べた内容のメモ書きです。
+
+#### 処理を順次実行する (基本的な使い方)
+非同期でない普通の処理を順次実行します。この例ではDeferredオブジェクトのありがたみは全くありません。
+
+    $.Deferred()
+    .done( function( arg ) {
+        console.log("1:" + arg)
+    } )
+    .done( function( arg ) {
+        console.log("2: " + arg)
+    } )
+    .resolve("hogehoge")
+
+#### コールバックの処理結果を次のコールバックに与える
+ただ単に処理を羅列しても面白くもなんともないので、前の処理結果を次の処理に渡して参照します。
+
+    $.Deferred()
+    .resolve("hogehoge")
+    .pipe( function( arg ) {
+        console.log(arg)
+        return "fugafuga"
+    } )
+    .done( function( arg ) {
+        console.log("1st task returns " + arg)
+    } )
+
+pipe()に与えたコールバックが返した値は、次のコールバックに渡されます。また、done()はthis返すのに対し、pipe()はthisとは別のPromiseオブジェクトを返します。promiseオブジェクトはresolve(), reject(), promise()などの実行状態を変化させるメソッドが定義されていません。
+
+最初の例ではresolve()をコールバック登録後に読んでいるのに対し上の例では登録前に読んでいます(最後に呼ぶとPromiseオブジェクトに対する呼び出しになってしまうため)が、この順番はあまり関係がありません。resolve()の前に追加されたコールバックでも後に追加されたコールバックでも関係なく登録された順番に実行されていくようになっています。これはDeferredオブジェクトの内部でコールバックを管理している、$.Callbacksオブジェクトの実装によるものです。
+
+
+#### あとから処理を追加する
+一旦実行状態に入ったDeferred Objectにあとからコールバックを追加しても実行されるので、下のようにバックグラウンドのタスクキューみたいな使い方もできます。
+<iframe style="width: 100%; height: 300px" src="http://jsfiddle.net/haiiro_shimeji/huQ44/embedded/" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+#### 非同期処理をチェーンする
+pipe()に与えたコールバックからpromiseオブジェクトを返すと、次のコールバックはその実行を待って実行されます。promiseオブジェクトのresolve()の引数に与えた値は、次のコールバックの引数になります。
+
+    $.Deferred()
+    .resolve("hogehoge")
+    .pipe( function( arg ) {
+        return $.ajax( {
+           url: url
+        } )
+     } )
+    .done( function( arg ) {
+        console.log(arg)
+    } )
+    .pipe( function() {
+        return $.Deferred( function(d) {
+            setTimeout( function() { 
+                d.resolve("fugafuga") 
+            }, 1000 )
+        } ).promise()
+    } )
+    .done( function( arg ) {
+        console.log(arg)    //fugafuga
+    } )
+
+$.ajax()のjQueryの非同期処理メソッドはだいたい(?)promiseオブジェクトを返すので、pipe()に与えたコールバックの戻り値として返せばよいです。jQuery Deferredと関連のない非同期処理の場合は、3つめのコールバックのように、あとからresolve()またはreject()される予定のpromiseオブジェクトを返します。
+
+
+#### 処理が途中で失敗したとき
+ここまでは全てのコールバックが成功する前提で適当に組んでいましたが、人生何もかもうまくいくはずはなく当然処理の失敗というのも考えられます。$.ajax()などの非同期メソッドでは、処理に失敗すると戻り値のpromiseオブジェクトのreject()が呼び出されます (下のコードでは例のために自分で作ったpromiseオブジェクトのreject()を読んでいます)。
+
+    $.Deferred()
+    .resolve("hogehoge")
+    .pipe( function() {
+        return $.Deferred( function(d) {
+            setTimeout( function() {
+                //何らかの理由で失敗してしまった場合、reject()を呼ぶ
+                d.reject("fugafuga") 
+            }, 1000 )
+        } ).promise()
+    } )
+    .fail( function( arg ) {
+        //reject()が呼び出されたDeferredオブジェクトは、fail()で登録されたコールバックが順次実行される
+    } )
+    .done( function( arg ) {
+        //done()で登録されたコールバックは実行されない
+    } )
+    .pipe( 
+        function() {
+            //pipe()の第一引数は成功時コールバック。この場合は呼ばれない
+        },
+        function() {
+            //第二引数は失敗時コールバック。こちらが呼ばれる。
+            return "error message";
+        }
+    )
+    .fail( function( errorMessage ) {
+        alert( errorMessage )
+    } )
+    .always( function() {
+        //always()で登録したコールバックは成功失敗いずれの場合にも呼ばれる。
+    } )
+
+処理が失敗した場合に行う処理はfail()メソッドをつかってコールバック登録します。また、pipe()も第二引数で失敗時コールバックを指定することができます。成功時コールバックと同様に、次の処理に値またはpromiseオブジェクトを引き渡すことができます。また、always()を使うと、同じコールバックをdone()とfail()で同時に登録してくれます。finally処理のように使うことができます。
+
+#### 処理が途中で失敗したがリカバリして成功ルートに戻る
+上の例では、処理が途中で失敗した場合は成功ルートを踏み外しエラー処理をひたすら行なっていくしかないですが、実際には取得に失敗した値についてデフォルト値を使うなどでリカバリしてそのまま処理を継続したい場合があります。
+
+    $.Deferred()
+    .resolve()
+    .pipe( function() {
+        return $.ajax( {
+            url: "/resource"
+        } )
+    } )
+    .pipe(
+        function( data ) {
+            return _parse( data )
+        },
+        function() {
+            //取得に失敗した場合はデフォルト値を使い、正常処理をつづける
+            return $.Deferred().resolve( DEFAULT )
+        }
+    )
+    .done( function( arg ) {
+        //ajaxは失敗したが、pipeされたDeferredオブジェクトでresolve()が呼ばれたので成功ルートに戻った
+    } )
+    .pipe( 
+        function( data ) {
+            return $.ajax( {
+                url: data
+            } )
+        }
+    )
+
+
+#### 処理をフォークする
+$.when() は複数のPromiseオブジェクトを引数に取り、それら全ての実行終了を待ち合わせるPromiseオブジェクトを返します。下の例では、ふたつのajax通信が成功するとdoneのコールバックに処理が移ります。doneのコールバックには非同期処理の結果が、when()に渡したオブジェクトの順番で引数として与えられます。
+
+いずれかの取得が失敗した場合、ただちにfail()に与えられたコールバックに処理が移ります。このとき他の通信が成功していたとしても全ての結果が取得できない点がポイントです。
+
+	$.when( 
+	    $.ajax( {
+			url: url1,
+			data: data1
+		} ),
+	    $.ajax( {
+			url: url2,
+			data: data2
+		} )
+	)
+	.done( function( resultFromAjax1, resultFromAjax2 ) {
+	        console.log("ajax1 returns " + resultFromAjax1[0])
+	        console.log("ajax2 returns " + resultFromAjax2[0])
+	} )
+	.fail( function( xhr, status, error ) {
+	        console.log("failed: " + status)
+	} )
+
+失敗しても他の結果は取得したい場合はこんな感じですかね。。
+
+	$.when( 
+	    $.ajax( {
+			url: url1,
+			data: data1
+		} )
+		.pipe(
+			function( result, status, xhr ) { 
+				return $.Deferred().resolve( result, status, xhr ) 
+			},
+			function( xhr, status, error ) {
+				return $.Deferred().resolve( DEFAULT, status, xhr )
+			}
+		),
+	    $.ajax( {
+			url: url2,
+			data: data2
+		} )
+		.pipe(
+		function( result, status, xhr ) { 
+				return $.Deferred().resolve( result, status, xhr ) 
+			},
+			function( xhr, status, error ) {
+				return $.Deferred().resolve( DEFAULT, status, xhr )
+			}
+		)
+	)
+	.done( function( resultFromAjax1, resultFromAjax2 ) {
+	        console.log("ajax1 returns " + resultFromAjax1[0])
+	        console.log("ajax2 returns " + resultFromAjax2[0])
+	} )
+	.fail( function( xhr, status, error ) {
+	        console.log("failed: " + status)
+	} )
+
+重複コードができてしまうので、Promiseオブジェクト生成の部分は $.map() とかを使ってまとめるとよいです。
+
+
+#### 非同期処理をいっぱいチェーンする
+$.when() は、ある配列について各要素に対し非同期処理を並列実行します。順次実行したい場合は以下のようにします。
+
+    var defer = $.Deferred()
+                .resolve([])
+    var piped = defer
+
+    $.each( urlArray, function( i, url ) {
+        piped = piped.pipe( function(results) {
+            return $.ajax( {
+               url: url
+            } )
+			.pipe( function( data, status, xhr ) {
+				results.push(data)
+			} )
+        } )
+    }
+
+	piped.pipe( function( results ) {
+		$.each( results, function( i, result ) {
+			console.log(result)
+		} )
+	} )
+
+
+#### then()とは何だったのか
+  jquery ver1.8.3
+  の実装では、pipe()はthen()のエイリアスということになっています。ドキュメントではthen()はむしろdone(), fail(), notify()と互換であるようなことが書かれていますが、then()とdone(), fail(), notify()では戻り値が違うので同じだと思って使うとアレなことになりそうです。
+    $.Deferred()
+    .then( function( arg ) {
+        return "fugafuga"	//次のコールバックに値を与えられる
+    } )
+    .done( function( arg ) {
+        console.log(arg)
+    } )
+	.resolve("hogehoge")	//Promiseオブジェクトのresolve()呼び出しはerrorになる
