@@ -1,0 +1,90 @@
+---
+layout: post
+title: "PhoneGap+OpenLayersでAndroid用地図アプリを作成する"
+date: 2013-01-10
+comments: true
+categories:
+---
+Androidで地図アプリを作成しようとする場合、真正面から取り組むとWMS取得、描画プログラムを自前で実装することになり非常にめんどくさいです。
+
+ですが、Javascriptで実績を残しているライブラリOpenLayersをPhonegap上で動作させれば、悲しいほど簡単に実現することができます。
+
+#### 前提条件
+AndroidSDKをインストールしておきましょう。<br/>
+最新のPhonegap(記事投稿時点で2.2.0)を利用するためにAPIバージョンは15以上をインストールしましょう。
+
+### 必要なライブラリを取得します
+http://phonegap.com/<br/>
+http://openlayers.org/<br/>
+
+### PhonegapのAndroid exampleをコピーします
+
+    # phonegapパッケージを解答してできたディレクトリにいるとして、
+    cp -pri lib/android/example/ ~/cordova-example 
+
+### 設定ファイルを書き変えます
+コピーしてできたディレクトリにある2つのファイルを書き変えます。
+
+local.properties を作成し、
+
+    sdk.dir=[AndroidSDK がインストールされているディレクトリの絶対パス]
+
+と書き込みます。
+
+project.properties を編集します。
+
+    target=android-15
+
+"15"はインストールされている別のAPIバージョンにしてもいいです。
+
+### OpenLayersをパッケージに入れます
+OpenLayersを解凍したディレクトリに入っている OpenLayers.jsとthemesディレクトリを、assets/www/ ディレクトリ以下にコピーします。
+
+### assets/www/index.html を書き変えます
+
+    <!DOCTYPE html>
+    <html>
+        <head>
+                <title>OpenLayers Map</title>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+                <meta name="format-detection" content="telephone=no" />
+                <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
+                <link rel="stylesheet" href="OpenLayers/theme/default/style.css" type="text/css">
+        <link rel="stylesheet" href="OpenLayers/theme/default/google.css" type="text/css">
+                <script src="cordova-#########js"></script>
+                <script src="OpenLayers/OpenLayers.js"></script>
+                <script type="text/javascript">
+                    document.addEventListener('deviceready', function() {
+                        var map = new OpenLayers.Map( {
+                            div: "map",
+                        } );
+                        map.addControl(new OpenLayers.Control.Zoom());
+                        map.addControl(new OpenLayers.Control.Navigation({'zoomWheelEnabled': true}));
+                        map.addControl(new OpenLayers.Control.KeyboardDefaults());
+                        map.addControl(new OpenLayers.Control.TouchNavigation());
+
+                        map.addLayer( new OpenLayers.Layer.OSM( "Simple OSM Map") );
+
+                        //  とりあえず東京を中心にする
+                        map.setCenter(
+                            new OpenLayers.LonLat( 13###764772, 3###681610 ).transform(
+                                    new OpenLayers.Projection("EPSG:4326"),
+                                    map.getProjectionObject() ), 
+                            12 
+                        );
+
+                     }, false);
+
+                </script>
+        </head>
+        <body>
+            <div id="map" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0">
+                <div id="location" style="position: absolute; z-index: 65535;"></div>
+            </div>
+        </body>
+    </html>
+
+### ビルド、インストールします 
+事前にインストール対象のデバイスをデバッグ接続しておくか、エミュレータをたちあげておきましょう
+
+    $ ant install debug
