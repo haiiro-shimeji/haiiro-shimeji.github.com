@@ -1,0 +1,160 @@
+---
+layout: post
+title: "Geoserver extensionをScalaで作成する"
+date: 2013-06-25
+comments: true
+categories:
+---
+地理情報をオープンデータ形式で配信するサーバー[Geoserver](http://geoserver.org/display/GEOS/Welcome)のプラグイン "extension" をScalaで作成し、インストールします。
+
+Geoserver extensionを作るのもScalaプログラムを書くのもほとんど初めてです。
+
+とりあえず、公式チュートリアルの一番簡単そうなextension
+<http://docs.geoserver.org/latest/en/developer/programming-guide/ows-services/implementing.html>
+を、Scalaで書きなおしてみようと思います。
+
+Geoserver extensionsのチュートリアルは大体mavenでビルドするように紹介されているので、流れに乗ってmavenプロジェクトを作成します。mavenでScalaプロジェクトを作成しなければなりません。
+
+<http://d.hatena.ne.jp/clash_m45/20120614/1339682235>
+
+とりあえず上記リンクの通りにやりました。  
+    $ mvn archetype:generate
+なにやらプロジェクトのひな形が大量にリストアップされますが、"scala"と打つとscalaプロジェクトのひな形だけがフィルタされます。org.scala-tools.architypes のやつを選択しました。
+
+その後いろいろプロジェクト情報を聞かれますが、
+
+    Choose org.scala-tools.archetypes:scala-archetype-simple version: 
+    1: 1.0
+    2: 1.1
+    3: 1.2
+    4: 1.3
+    Choose a number: 4: 4
+    Define value for property 'groupId': : org.geoserver
+    Define value for property 'artifactId': : helloscala
+    Define value for property 'version': 1.0-SNAPSHOT: 
+    Define value for property 'package': org.geoserver: 
+    Confirm properties configuration:
+    groupId: org.geoserver
+    artifactId: helloscala
+    version: 1.0-SNAPSHOT
+    package: org.geoserver
+
+こんな感じで入力して作成実行しました。
+
+何かいい感じでプロジェクトが作成されたようなので、プロジェクトのディレクトリに移動しおもむろにビルドしてみます
+
+    $ mvn install
+
+うまくビルドできれば問題なくプロジェクト作成されているのではないでしょうか。
+
+さて、このひな形を元にgeoserver extensionを作成します。やることは、公式チュートリアルのpom.xmlを適当に修正することと、javaプログラムをScalaに書き直してパッケージに含めることです。
+
+pom.xmlはチュートリアルの内容を追記すればいいです。
+
+    <!-- set parent pom to community pom -->
+    <parent>
+        <groupId>org.geoserver</groupId>
+        <artifactId>community</artifactId>
+        <version>2.2.0</version>
+    </parent>
+
+    <!-- これらの行はすでに書き込まれていると思います
+    <groupId>org.geoserver</groupId>
+    <artifactId>hello</artifactId>
+    <version>1.0</version>
+    <name>Hello World Service Module</name>
+    -->
+    <packaging>jar</packaging>
+
+    <!-- declare depenency on geoserver main -->
+    <dependencies>
+        <dependency>
+          <groupId>org.geoserver</groupId>
+          <artifactId>main</artifactId>
+          <version>2.2.0</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+           <id>opengeo</id>
+           <name>opengeo</name>
+           <url>http://repo.opengeo.org</url>
+        </repository>
+    </repositories>
+
+src/main/scala/HelloWorld.scala を作成します。
+
+    import javax.servlet.http.HttpServletRequest;
+    import javax.servlet.http.HttpServletResponse;
+
+    class HelloWorld {
+      def sayHello(request: HttpServletRequest, response: HttpServletResponse){
+        response.getOutputStream().write( "Hello World!!".getBytes() );
+      }
+    }
+
+また、チュートリアルにあるapplicationContext.xmlをsrc/main/resourses/に作成します。
+チュートリアルではsrc/main/javaに作成されていますが、これに倣ってsrc/main/scalaに
+配置してもパッケージに含まれないので注意してください。
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+    <beans>
+        <!-- Spring will reference the instance of the HelloWorld class
+               by the id name "helloService" -->
+        <bean id="helloService" class="HelloWorld">
+            </bean>
+
+        <!-- This creates a Service descriptor, which allows the org.geoserver.ows.Dispatcher
+               to locate it. -->
+            <bean id="helloService-1.0.0" class="org.geoserver.platform.Service">
+        <!-- used to reference the service in the URL -->
+            <constructor-arg index="0" value="hello"/>
+
+            <!-- our actual service POJO defined previously -->
+            <constructor-arg index="1" ref="helloService"/>
+
+            <!-- a version number for this service -->
+            <constructor-arg index="2" value="1.0.0"/>
+
+            <!-- a list of functions for this service -->
+            <constructor-arg index="3">
+                <list>
+                    <value>sayHello</value>
+                </list>
+            </constructor-arg>
+
+            </bean>
+    </beans>
+
+こうなっているはずです
+
+    helloscala/
+      + pom.xml
+      + src/
+        + main/
+          + scala/
+            + HelloWorld.scala
+          + resources/
+            + applicationContext.xml
+
+ビルドします
+    $ mvn clean install
+
+target/helloscala-1.0-SNAPSHOT.jar ができているでしょうか。
+これをgeoserverのWEB-INF/lib/ディレクトリにコピーします。
+また、Scalaで作成されたクラスファイルを実行するためにscala-library.jarが必要なので、
+これもどこかから拾ってきて同じディレクトリに配置してください。
+以上ができたら、geoserverを(再)起動します。
+
+`ows?request=sayHello&service=hello&version=1.0.0`
+
+にアクセスして "Hello World!!" と表示されれば成功です。
+
+こんな感じで他のチュートリアルもScalaで書いてみたりしています。  
+<https://github.com/haiiro-shimeji/geoserver-extension-scala>
+
+JavaからScalaプログラムの呼び出しが可能なことを利用して、Geoserver extensionをScalaで作成しました。
+これで記述性の高いScalaでgeoserver開発が出来るようになるはずです。Scalaは今から勉強します。
