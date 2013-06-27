@@ -4,7 +4,7 @@
   <title><![CDATA[あきらめがちなブログ]]></title>
   <link href="http://haiiro-shimeji.github.com/atom.xml" rel="self"/>
   <link href="http://haiiro-shimeji.github.com/"/>
-  <updated>2013-06-27T21:51:36+09:00</updated>
+  <updated>2013-06-27T21:55:08+09:00</updated>
   <id>http://haiiro-shimeji.github.com/</id>
   <author>
     <name><![CDATA[haiiro.shimeji]]></name>
@@ -177,7 +177,7 @@ class HelloWorld {
 
 <p>にアクセスして &#8220;Hello World!!&#8221; と表示されれば成功です。</p>
 
-<p>こんな感じで他のチュートリアルもScalaで書いてみたりしています。
+<p>こんな感じで他のチュートリアルもScalaで書いてみたりしています。<br/>
 <a href="https://github.com/haiiro-shimeji/geoserver-extension-scala">https://github.com/haiiro-shimeji/geoserver-extension-scala</a></p>
 
 <p>JavaからScalaプログラムの呼び出しが可能なことを利用して、Geoserver extensionをScalaで作成しました。
