@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>あきらめがちなブログ</title>
+  <title>jQuery Deferred の使い方がよくわからない - あきらめがちなブログ</title>
   <meta name="author" content="haiiro.shimeji">
 
   
-  <meta name="description" content="地理情報をオープンデータ形式で配信するサーバーGeoserverのプラグイン &#8220;extension&#8221; をScalaで作成し、インストールします。 Geoserver extensionを作るのもScalaプログラムを書くのもほとんど初めてです。 とりあえず、 &hellip;">
+  <meta name="description" content="jQuery Deferred の使い方がよくわからないので、まったく今更なのですが調べた内容のメモ書きです。 処理を順次実行する (基本的な使い方) 非同期でない普通の処理を順次実行します。この例ではDeferredオブジェクトのありがたみは全くありません。 $.Deferred()
+.done &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://haiiro-shimeji.github.com/">
+  <link rel="canonical" href="http://haiiro-shimeji.github.com/blog/2012/12/12/deferred/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -60,342 +61,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2013/06/25/geoserver_scala/">Geoserver extensionをScalaで作成する</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-06-25T00:00:00+09:00" pubdate data-updated="true">Jun 25<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>地理情報をオープンデータ形式で配信するサーバー<a href="http://geoserver.org/display/GEOS/Welcome">Geoserver</a>のプラグイン &#8220;extension&#8221; をScalaで作成し、インストールします。</p>
-
-<p>Geoserver extensionを作るのもScalaプログラムを書くのもほとんど初めてです。</p>
-
-<p>とりあえず、公式チュートリアルの一番簡単そうなextension
-<a href="http://docs.geoserver.org/latest/en/developer/programming-guide/ows-services/implementing.html">http://docs.geoserver.org/latest/en/developer/programming-guide/ows-services/implementing.html</a>
-を、Scalaで書きなおしてみようと思います。</p>
-
-<p>Geoserver extensionsのチュートリアルは大体mavenでビルドするように紹介されているので、流れに乗ってmavenプロジェクトを作成します。mavenでScalaプロジェクトを作成しなければなりません。</p>
-
-<p><a href="http://d.hatena.ne.jp/clash_m45/20120614/1339682235">http://d.hatena.ne.jp/clash_m45/20120614/1339682235</a></p>
-
-<p>とりあえず上記リンクの通りにやりました。</p>
-
-<pre><code>$ mvn archetype:generate
-</code></pre>
-
-<p>なにやらプロジェクトのひな形が大量にリストアップされますが、&#8221;scala&#8221;と打つとscalaプロジェクトのひな形だけがフィルタされます。org.scala-tools.architypes のやつを選択しました。</p>
-
-<p>その後いろいろプロジェクト情報を聞かれますが、</p>
-
-<pre><code>Choose org.scala-tools.archetypes:scala-archetype-simple version: 
-1: 1.0
-2: 1.1
-3: 1.2
-4: 1.3
-Choose a number: 4: 4
-Define value for property 'groupId': : org.geoserver
-Define value for property 'artifactId': : helloscala
-Define value for property 'version': 1.0-SNAPSHOT: 
-Define value for property 'package': org.geoserver: 
-Confirm properties configuration:
-groupId: org.geoserver
-artifactId: helloscala
-version: 1.0-SNAPSHOT
-package: org.geoserver
-</code></pre>
-
-<p>こんな感じで入力して作成実行しました。</p>
-
-<p>何かいい感じでプロジェクトが作成されたようなので、プロジェクトのディレクトリに移動しおもむろにビルドしてみます</p>
-
-<pre><code>$ mvn install
-</code></pre>
-
-<p>うまくビルドできれば問題なくプロジェクト作成されているのではないでしょうか。</p>
-
-<p>さて、このひな形を元にgeoserver extensionを作成します。やることは、公式チュートリアルのpom.xmlを適当に修正することと、javaプログラムをScalaに書き直してパッケージに含めることです。</p>
-
-<p>pom.xmlはチュートリアルの内容を追記すればいいです。</p>
-
-<pre><code>&lt;!-- set parent pom to community pom --&gt;
-&lt;parent&gt;
-    &lt;groupId&gt;org.geoserver&lt;/groupId&gt;
-    &lt;artifactId&gt;community&lt;/artifactId&gt;
-    &lt;version&gt;2.2.0&lt;/version&gt;
-&lt;/parent&gt;
-
-&lt;!-- これらの行はすでに書き込まれていると思います
-&lt;groupId&gt;org.geoserver&lt;/groupId&gt;
-&lt;artifactId&gt;hello&lt;/artifactId&gt;
-&lt;version&gt;1.0&lt;/version&gt;
-&lt;name&gt;Hello World Service Module&lt;/name&gt;
---&gt;
-&lt;packaging&gt;jar&lt;/packaging&gt;
-
-&lt;!-- declare depenency on geoserver main --&gt;
-&lt;dependencies&gt;
-    &lt;dependency&gt;
-      &lt;groupId&gt;org.geoserver&lt;/groupId&gt;
-      &lt;artifactId&gt;main&lt;/artifactId&gt;
-      &lt;version&gt;2.2.0&lt;/version&gt;
-    &lt;/dependency&gt;
-&lt;/dependencies&gt;
-
-&lt;repositories&gt;
-    &lt;repository&gt;
-       &lt;id&gt;opengeo&lt;/id&gt;
-       &lt;name&gt;opengeo&lt;/name&gt;
-       &lt;url&gt;http://repo.opengeo.org&lt;/url&gt;
-    &lt;/repository&gt;
-&lt;/repositories&gt;
-</code></pre>
-
-<p>src/main/scala/HelloWorld.scala を作成します。</p>
-
-<pre><code>import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-class HelloWorld {
-  def sayHello(request: HttpServletRequest, response: HttpServletResponse){
-    response.getOutputStream().write( "Hello World!!".getBytes() );
-  }
-}
-</code></pre>
-
-<p>また、チュートリアルにあるapplicationContext.xmlをsrc/main/resourses/に作成します。
-チュートリアルではsrc/main/javaに作成されていますが、これに倣ってsrc/main/scalaに
-配置してもパッケージに含まれないので注意してください。</p>
-
-<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd"&gt;
-
-&lt;beans&gt;
-    &lt;!-- Spring will reference the instance of the HelloWorld class
-           by the id name "helloService" --&gt;
-    &lt;bean id="helloService" class="HelloWorld"&gt;
-        &lt;/bean&gt;
-
-    &lt;!-- This creates a Service descriptor, which allows the org.geoserver.ows.Dispatcher
-           to locate it. --&gt;
-        &lt;bean id="helloService-1.0.0" class="org.geoserver.platform.Service"&gt;
-    &lt;!-- used to reference the service in the URL --&gt;
-        &lt;constructor-arg index="0" value="hello"/&gt;
-
-        &lt;!-- our actual service POJO defined previously --&gt;
-        &lt;constructor-arg index="1" ref="helloService"/&gt;
-
-        &lt;!-- a version number for this service --&gt;
-        &lt;constructor-arg index="2" value="1.0.0"/&gt;
-
-        &lt;!-- a list of functions for this service --&gt;
-        &lt;constructor-arg index="3"&gt;
-            &lt;list&gt;
-                &lt;value&gt;sayHello&lt;/value&gt;
-            &lt;/list&gt;
-        &lt;/constructor-arg&gt;
-
-        &lt;/bean&gt;
-&lt;/beans&gt;
-</code></pre>
-
-<p>こうなっているはずです</p>
-
-<pre><code>helloscala/
-  + pom.xml
-  + src/
-    + main/
-      + scala/
-        + HelloWorld.scala
-    + resources/
-        + applicationContext.xml
-</code></pre>
-
-<p>ビルドします</p>
-
-<pre><code>$ mvn clean install
-</code></pre>
-
-<p>target/helloscala-1.0-SNAPSHOT.jar ができているでしょうか。
-これをgeoserverのWEB-INF/lib/ディレクトリにコピーします。
-また、Scalaで作成されたクラスファイルを実行するためにscala-library.jarが必要なので、
-これもどこかから拾ってきて同じディレクトリに配置してください。
-以上ができたら、geoserverを(再)起動します。</p>
-
-<p><code>ows?request=sayHello&amp;service=hello&amp;version=1.0.0</code></p>
-
-<p>にアクセスして &#8220;Hello World!!&#8221; と表示されれば成功です。</p>
-
-<p>こんな感じで他のチュートリアルもScalaで書いてみたりしています。
-<a href="https://github.com/haiiro-shimeji/geoserver-extension-scala">https://github.com/haiiro-shimeji/geoserver-extension-scala</a></p>
-
-<p>JavaからScalaプログラムの呼び出しが可能なことを利用して、Geoserver extensionをScalaで作成しました。
-これで記述性の高いScalaでgeoserver開発が出来るようになるはずです。Scalaは今から勉強します。</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/01/10/phonegap_openlayers/">PhoneGap+OpenLayersでAndroid用地図アプリを作成する</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-01-10T00:00:00+09:00" pubdate data-updated="true">Jan 10<span>th</span>, 2013</time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Androidで地図アプリを作成しようとする場合、真正面から取り組むとWMS取得、描画プログラムを自前で実装することになり非常にめんどくさいです。</p>
-
-<p>ですが、Javascriptで実績を残しているライブラリOpenLayersをPhonegap上で動作させれば、悲しいほど簡単に実現することができます。</p>
-
-<h4>前提条件</h4>
-
-<p>AndroidSDKをインストールしておきましょう。<br/>
-最新のPhonegap(記事投稿時点で2.2.0)を利用するためにAPIバージョンは15以上をインストールしましょう。</p>
-
-<h3>必要なライブラリを取得します</h3>
-
-<p>http://phonegap.com/<br/>
-http://openlayers.org/<br/></p>
-
-<h3>PhonegapのAndroid exampleをコピーします</h3>
-
-<pre><code># phonegapパッケージを解答してできたディレクトリにいるとして、
-cp -pri lib/android/example/ ~/cordova-example 
-</code></pre>
-
-<h3>設定ファイルを書き変えます</h3>
-
-<p>コピーしてできたディレクトリにある2つのファイルを書き変えます。</p>
-
-<p>local.properties を作成し、</p>
-
-<pre><code>sdk.dir=[AndroidSDK がインストールされているディレクトリの絶対パス]
-</code></pre>
-
-<p>と書き込みます。</p>
-
-<p>project.properties を編集します。</p>
-
-<pre><code>target=android-15
-</code></pre>
-
-<p>&#8220;15&#8221;はインストールされている別のAPIバージョンにしてもいいです。</p>
-
-<h3>OpenLayersをパッケージに入れます</h3>
-
-<p>OpenLayersを解凍したディレクトリに入っている OpenLayers.jsとthemesディレクトリを、assets/www/ ディレクトリ以下にコピーします。</p>
-
-<h3>assets/www/index.html を書き変えます</h3>
-
-<pre><code>&lt;!DOCTYPE html&gt;
-&lt;html&gt;
-    &lt;head&gt;
-            &lt;title&gt;OpenLayers Map&lt;/title&gt;
-            &lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /&gt;
-            &lt;meta name="format-detection" content="telephone=no" /&gt;
-            &lt;meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" /&gt;
-            &lt;link rel="stylesheet" href="OpenLayers/theme/default/style.css" type="text/css"&gt;
-    &lt;link rel="stylesheet" href="OpenLayers/theme/default/google.css" type="text/css"&gt;
-            &lt;script src="cordova-#########js"&gt;&lt;/script&gt;
-            &lt;script src="OpenLayers/OpenLayers.js"&gt;&lt;/script&gt;
-            &lt;script type="text/javascript"&gt;
-                document.addEventListener('deviceready', function() {
-                    var map = new OpenLayers.Map( {
-                        div: "map",
-                    } );
-                    map.addControl(new OpenLayers.Control.Zoom());
-                    map.addControl(new OpenLayers.Control.Navigation({'zoomWheelEnabled': true}));
-                    map.addControl(new OpenLayers.Control.KeyboardDefaults());
-                    map.addControl(new OpenLayers.Control.TouchNavigation());
-
-                    map.addLayer( new OpenLayers.Layer.OSM( "Simple OSM Map") );
-
-                    //  とりあえず東京を中心にする
-                    map.setCenter(
-                        new OpenLayers.LonLat( 13###764772, 3###681610 ).transform(
-                                new OpenLayers.Projection("EPSG:4326"),
-                                map.getProjectionObject() ), 
-                        12 
-                    );
-
-                 }, false);
-
-            &lt;/script&gt;
-    &lt;/head&gt;
-    &lt;body&gt;
-        &lt;div id="map" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0"&gt;
-            &lt;div id="location" style="position: absolute; z-index: 65535;"&gt;&lt;/div&gt;
-        &lt;/div&gt;
-    &lt;/body&gt;
-&lt;/html&gt;
-</code></pre>
-
-<h3>ビルド、インストールします</h3>
-
-<p>事前にインストール対象のデバイスをデバッグ接続しておくか、エミュレータをたちあげておきましょう</p>
-
-<pre><code>$ ant install debug
-</code></pre>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/12/12/deferred/">jQuery Deferred の使い方がよくわからない</a></h1>
+      <h1 class="entry-title">jQuery Deferred の使い方がよくわからない</h1>
     
     
       <p class="meta">
@@ -418,7 +89,7 @@ cp -pri lib/android/example/ ~/cordova-example
   </header>
 
 
-  <div class="entry-content"><p>jQuery Deferred の使い方がよくわからないので、まったく今更なのですが調べた内容のメモ書きです。</p>
+<div class="entry-content"><p>jQuery Deferred の使い方がよくわからないので、まったく今更なのですが調べた内容のメモ書きです。</p>
 
 <h4>処理を順次実行する (基本的な使い方)</h4>
 
@@ -664,18 +335,53 @@ piped.pipe( function( results ) {
 .resolve("hogehoge")    //Promiseオブジェクトのresolve()呼び出しはerrorになる
 </code></pre>
 </div>
+
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">haiiro.shimeji</span></span>
+
+      
+
+
+
+
+
+
+
+
   
 
 
-    </article>
+<time datetime="2012-12-12T00:00:00+09:00" pubdate data-updated="true">Dec 12<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
   
-  <div class="pagination">
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://haiiro-shimeji.github.com/blog/2012/12/12/deferred/" data-via="" data-counturl="http://haiiro-shimeji.github.com/blog/2012/12/12/deferred/" >Tweet</a>
+  
+  
+  
 </div>
+
+    
+    <p class="meta">
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/01/10/phonegap_openlayers/" title="Next Post: PhoneGap+OpenLayersでAndroid用地図アプリを作成する">PhoneGap+OpenLayersでAndroid用地図アプリを作成する &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
 <aside class="sidebar">
   
     <section>
@@ -704,6 +410,7 @@ piped.pipe( function( results ) {
 
   
 </aside>
+
 
     </div>
   </div>

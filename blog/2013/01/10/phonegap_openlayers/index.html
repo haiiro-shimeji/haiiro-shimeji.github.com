@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>PhoneGap+OpenLayersでAndroid用地図アプリを作成する - あきらめがちなブログ</title>
+  <meta name="author" content="haiiro.shimeji">
+
+  
+  <meta name="description" content="Androidで地図アプリを作成しようとする場合、真正面から取り組むとWMS取得、描画プログラムを自前で実装することになり非常にめんどくさいです。 ですが、Javascriptで実績を残しているライブラリOpenLayersをPhonegap上で動作させれば、悲しいほど簡単に実現することができます &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://haiiro-shimeji.github.com/blog/2013/01/10/phonegap_openlayers/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="あきらめがちなブログ" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">あきらめがちなブログ</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:haiiro-shimeji.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">PhoneGap+OpenLayersでAndroid用地図アプリを作成する</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-10T00:00:00+09:00" pubdate data-updated="true">Jan 10<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Androidで地図アプリを作成しようとする場合、真正面から取り組むとWMS取得、描画プログラムを自前で実装することになり非常にめんどくさいです。</p>
+
+<p>ですが、Javascriptで実績を残しているライブラリOpenLayersをPhonegap上で動作させれば、悲しいほど簡単に実現することができます。</p>
+
+<h4>前提条件</h4>
+
+<p>AndroidSDKをインストールしておきましょう。<br/>
+最新のPhonegap(記事投稿時点で2.2.0)を利用するためにAPIバージョンは15以上をインストールしましょう。</p>
+
+<h3>必要なライブラリを取得します</h3>
+
+<p>http://phonegap.com/<br/>
+http://openlayers.org/<br/></p>
+
+<h3>PhonegapのAndroid exampleをコピーします</h3>
+
+<pre><code># phonegapパッケージを解答してできたディレクトリにいるとして、
+cp -pri lib/android/example/ ~/cordova-example 
+</code></pre>
+
+<h3>設定ファイルを書き変えます</h3>
+
+<p>コピーしてできたディレクトリにある2つのファイルを書き変えます。</p>
+
+<p>local.properties を作成し、</p>
+
+<pre><code>sdk.dir=[AndroidSDK がインストールされているディレクトリの絶対パス]
+</code></pre>
+
+<p>と書き込みます。</p>
+
+<p>project.properties を編集します。</p>
+
+<pre><code>target=android-15
+</code></pre>
+
+<p>"15"はインストールされている別のAPIバージョンにしてもいいです。</p>
+
+<h3>OpenLayersをパッケージに入れます</h3>
+
+<p>OpenLayersを解凍したディレクトリに入っている OpenLayers.jsとthemesディレクトリを、assets/www/ ディレクトリ以下にコピーします。</p>
+
+<h3>assets/www/index.html を書き変えます</h3>
+
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+            &lt;title&gt;OpenLayers Map&lt;/title&gt;
+            &lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /&gt;
+            &lt;meta name="format-detection" content="telephone=no" /&gt;
+            &lt;meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" /&gt;
+            &lt;link rel="stylesheet" href="OpenLayers/theme/default/style.css" type="text/css"&gt;
+    &lt;link rel="stylesheet" href="OpenLayers/theme/default/google.css" type="text/css"&gt;
+            &lt;script src="cordova-#########js"&gt;&lt;/script&gt;
+            &lt;script src="OpenLayers/OpenLayers.js"&gt;&lt;/script&gt;
+            &lt;script type="text/javascript"&gt;
+                document.addEventListener('deviceready', function() {
+                    var map = new OpenLayers.Map( {
+                        div: "map",
+                    } );
+                    map.addControl(new OpenLayers.Control.Zoom());
+                    map.addControl(new OpenLayers.Control.Navigation({'zoomWheelEnabled': true}));
+                    map.addControl(new OpenLayers.Control.KeyboardDefaults());
+                    map.addControl(new OpenLayers.Control.TouchNavigation());
+
+                    map.addLayer( new OpenLayers.Layer.OSM( "Simple OSM Map") );
+
+                    //  とりあえず東京を中心にする
+                    map.setCenter(
+                        new OpenLayers.LonLat( 13###764772, 3###681610 ).transform(
+                                new OpenLayers.Projection("EPSG:4326"),
+                                map.getProjectionObject() ), 
+                        12 
+                    );
+
+                 }, false);
+
+            &lt;/script&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        &lt;div id="map" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0"&gt;
+            &lt;div id="location" style="position: absolute; z-index: 65535;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<h3>ビルド、インストールします</h3>
+
+<p>事前にインストール対象のデバイスをデバッグ接続しておくか、エミュレータをたちあげておきましょう</p>
+
+<pre><code>$ ant install debug
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">haiiro.shimeji</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-10T00:00:00+09:00" pubdate data-updated="true">Jan 10<span>th</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://haiiro-shimeji.github.com/blog/2013/01/10/phonegap_openlayers/" data-via="" data-counturl="http://haiiro-shimeji.github.com/blog/2013/01/10/phonegap_openlayers/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/12/12/deferred/" title="Previous Post: jQuery Deferred の使い方がよくわからない">&laquo; jQuery Deferred の使い方がよくわからない</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/06/25/geoserver_scala/" title="Next Post: Geoserver extensionをScalaで作成する">Geoserver extensionをScalaで作成する &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/06/25/geoserver_scala/">Geoserver extensionをScalaで作成する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/01/10/phonegap_openlayers/">PhoneGap+OpenLayersでAndroid用地図アプリを作成する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/12/12/deferred/">jQuery Deferred の使い方がよくわからない</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - haiiro.shimeji -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

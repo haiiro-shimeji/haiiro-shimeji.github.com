@@ -1,33 +1,541 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[My Octopress Blog]]></title>
+  <title><![CDATA[あきらめがちなブログ]]></title>
   <link href="http://haiiro-shimeji.github.com/atom.xml" rel="self"/>
   <link href="http://haiiro-shimeji.github.com/"/>
-  <updated>2012-12-08T08:45:40+09:00</updated>
+  <updated>2013-06-27T21:49:42+09:00</updated>
   <id>http://haiiro-shimeji.github.com/</id>
   <author>
-    <name><![CDATA[Your Name]]></name>
+    <name><![CDATA[haiiro.shimeji]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
   
   <entry>
-    <title type="html"><![CDATA[ふがふが]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2012/12/06/fuga/"/>
-    <updated>2012-12-06T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2012/12/06/fuga</id>
-    <content type="html"><![CDATA[<p>ふがふが！ふがふが！</p>
+    <title type="html"><![CDATA[Geoserver extensionをScalaで作成する]]></title>
+    <link href="http://haiiro-shimeji.github.com/blog/2013/06/25/geoserver_scala/"/>
+    <updated>2013-06-25T00:00:00+09:00</updated>
+    <id>http://haiiro-shimeji.github.com/blog/2013/06/25/geoserver_scala</id>
+    <content type="html"><![CDATA[<p>地理情報をオープンデータ形式で配信するサーバー<a href="http://geoserver.org/display/GEOS/Welcome">Geoserver</a>のプラグイン &#8220;extension&#8221; をScalaで作成し、インストールします。</p>
+
+<p>Geoserver extensionを作るのもScalaプログラムを書くのもほとんど初めてです。</p>
+
+<p>とりあえず、公式チュートリアルの一番簡単そうなextension
+<a href="http://docs.geoserver.org/latest/en/developer/programming-guide/ows-services/implementing.html">http://docs.geoserver.org/latest/en/developer/programming-guide/ows-services/implementing.html</a>
+を、Scalaで書きなおしてみようと思います。</p>
+
+<p>Geoserver extensionsのチュートリアルは大体mavenでビルドするように紹介されているので、流れに乗ってmavenプロジェクトを作成します。mavenでScalaプロジェクトを作成しなければなりません。</p>
+
+<p><a href="http://d.hatena.ne.jp/clash_m45/20120614/1339682235">http://d.hatena.ne.jp/clash_m45/20120614/1339682235</a></p>
+
+<p>とりあえず上記リンクの通りにやりました。</p>
+
+<pre><code>$ mvn archetype:generate
+</code></pre>
+
+<p>なにやらプロジェクトのひな形が大量にリストアップされますが、&#8221;scala&#8221;と打つとscalaプロジェクトのひな形だけがフィルタされます。org.scala-tools.architypes のやつを選択しました。</p>
+
+<p>その後いろいろプロジェクト情報を聞かれますが、</p>
+
+<pre><code>Choose org.scala-tools.archetypes:scala-archetype-simple version: 
+1: 1.0
+2: 1.1
+3: 1.2
+4: 1.3
+Choose a number: 4: 4
+Define value for property 'groupId': : org.geoserver
+Define value for property 'artifactId': : helloscala
+Define value for property 'version': 1.0-SNAPSHOT: 
+Define value for property 'package': org.geoserver: 
+Confirm properties configuration:
+groupId: org.geoserver
+artifactId: helloscala
+version: 1.0-SNAPSHOT
+package: org.geoserver
+</code></pre>
+
+<p>こんな感じで入力して作成実行しました。</p>
+
+<p>何かいい感じでプロジェクトが作成されたようなので、プロジェクトのディレクトリに移動しおもむろにビルドしてみます</p>
+
+<pre><code>$ mvn install
+</code></pre>
+
+<p>うまくビルドできれば問題なくプロジェクト作成されているのではないでしょうか。</p>
+
+<p>さて、このひな形を元にgeoserver extensionを作成します。やることは、公式チュートリアルのpom.xmlを適当に修正することと、javaプログラムをScalaに書き直してパッケージに含めることです。</p>
+
+<p>pom.xmlはチュートリアルの内容を追記すればいいです。</p>
+
+<pre><code>&lt;!-- set parent pom to community pom --&gt;
+&lt;parent&gt;
+    &lt;groupId&gt;org.geoserver&lt;/groupId&gt;
+    &lt;artifactId&gt;community&lt;/artifactId&gt;
+    &lt;version&gt;2.2.0&lt;/version&gt;
+&lt;/parent&gt;
+
+&lt;!-- これらの行はすでに書き込まれていると思います
+&lt;groupId&gt;org.geoserver&lt;/groupId&gt;
+&lt;artifactId&gt;hello&lt;/artifactId&gt;
+&lt;version&gt;1.0&lt;/version&gt;
+&lt;name&gt;Hello World Service Module&lt;/name&gt;
+--&gt;
+&lt;packaging&gt;jar&lt;/packaging&gt;
+
+&lt;!-- declare depenency on geoserver main --&gt;
+&lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.geoserver&lt;/groupId&gt;
+      &lt;artifactId&gt;main&lt;/artifactId&gt;
+      &lt;version&gt;2.2.0&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;
+
+&lt;repositories&gt;
+    &lt;repository&gt;
+       &lt;id&gt;opengeo&lt;/id&gt;
+       &lt;name&gt;opengeo&lt;/name&gt;
+       &lt;url&gt;http://repo.opengeo.org&lt;/url&gt;
+    &lt;/repository&gt;
+&lt;/repositories&gt;
+</code></pre>
+
+<p>src/main/scala/HelloWorld.scala を作成します。</p>
+
+<pre><code>import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+class HelloWorld {
+  def sayHello(request: HttpServletRequest, response: HttpServletResponse){
+    response.getOutputStream().write( "Hello World!!".getBytes() );
+  }
+}
+</code></pre>
+
+<p>また、チュートリアルにあるapplicationContext.xmlをsrc/main/resourses/に作成します。
+チュートリアルではsrc/main/javaに作成されていますが、これに倣ってsrc/main/scalaに
+配置してもパッケージに含まれないので注意してください。</p>
+
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd"&gt;
+
+&lt;beans&gt;
+    &lt;!-- Spring will reference the instance of the HelloWorld class
+           by the id name "helloService" --&gt;
+    &lt;bean id="helloService" class="HelloWorld"&gt;
+        &lt;/bean&gt;
+
+    &lt;!-- This creates a Service descriptor, which allows the org.geoserver.ows.Dispatcher
+           to locate it. --&gt;
+        &lt;bean id="helloService-1.0.0" class="org.geoserver.platform.Service"&gt;
+    &lt;!-- used to reference the service in the URL --&gt;
+        &lt;constructor-arg index="0" value="hello"/&gt;
+
+        &lt;!-- our actual service POJO defined previously --&gt;
+        &lt;constructor-arg index="1" ref="helloService"/&gt;
+
+        &lt;!-- a version number for this service --&gt;
+        &lt;constructor-arg index="2" value="1.0.0"/&gt;
+
+        &lt;!-- a list of functions for this service --&gt;
+        &lt;constructor-arg index="3"&gt;
+            &lt;list&gt;
+                &lt;value&gt;sayHello&lt;/value&gt;
+            &lt;/list&gt;
+        &lt;/constructor-arg&gt;
+
+        &lt;/bean&gt;
+&lt;/beans&gt;
+</code></pre>
+
+<p>こうなっているはずです</p>
+
+<pre><code>helloscala/
+  + pom.xml
+  + src/
+    + main/
+      + scala/
+        + HelloWorld.scala
+    + resources/
+        + applicationContext.xml
+</code></pre>
+
+<p>ビルドします</p>
+
+<pre><code>$ mvn clean install
+</code></pre>
+
+<p>target/helloscala-1.0-SNAPSHOT.jar ができているでしょうか。
+これをgeoserverのWEB-INF/lib/ディレクトリにコピーします。
+また、Scalaで作成されたクラスファイルを実行するためにscala-library.jarが必要なので、
+これもどこかから拾ってきて同じディレクトリに配置してください。
+以上ができたら、geoserverを(再)起動します。</p>
+
+<p><code>ows?request=sayHello&amp;service=hello&amp;version=1.0.0</code></p>
+
+<p>にアクセスして &#8220;Hello World!!&#8221; と表示されれば成功です。</p>
+
+<p>こんな感じで他のチュートリアルもScalaで書いてみたりしています。
+<a href="https://github.com/haiiro-shimeji/geoserver-extension-scala">https://github.com/haiiro-shimeji/geoserver-extension-scala</a></p>
+
+<p>JavaからScalaプログラムの呼び出しが可能なことを利用して、Geoserver extensionをScalaで作成しました。
+これで記述性の高いScalaでgeoserver開発が出来るようになるはずです。Scalaは今から勉強します。</p>
 ]]></content>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[ほげほげ]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2012/12/05/hoge/"/>
-    <updated>2012-12-05T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2012/12/05/hoge</id>
-    <content type="html"><![CDATA[<p>ほげ</p>
+    <title type="html"><![CDATA[PhoneGap+OpenLayersでAndroid用地図アプリを作成する]]></title>
+    <link href="http://haiiro-shimeji.github.com/blog/2013/01/10/phonegap_openlayers/"/>
+    <updated>2013-01-10T00:00:00+09:00</updated>
+    <id>http://haiiro-shimeji.github.com/blog/2013/01/10/phonegap_openlayers</id>
+    <content type="html"><![CDATA[<p>Androidで地図アプリを作成しようとする場合、真正面から取り組むとWMS取得、描画プログラムを自前で実装することになり非常にめんどくさいです。</p>
+
+<p>ですが、Javascriptで実績を残しているライブラリOpenLayersをPhonegap上で動作させれば、悲しいほど簡単に実現することができます。</p>
+
+<h4>前提条件</h4>
+
+<p>AndroidSDKをインストールしておきましょう。<br/>
+最新のPhonegap(記事投稿時点で2.2.0)を利用するためにAPIバージョンは15以上をインストールしましょう。</p>
+
+<h3>必要なライブラリを取得します</h3>
+
+<p>http://phonegap.com/<br/>
+http://openlayers.org/<br/></p>
+
+<h3>PhonegapのAndroid exampleをコピーします</h3>
+
+<pre><code># phonegapパッケージを解答してできたディレクトリにいるとして、
+cp -pri lib/android/example/ ~/cordova-example 
+</code></pre>
+
+<h3>設定ファイルを書き変えます</h3>
+
+<p>コピーしてできたディレクトリにある2つのファイルを書き変えます。</p>
+
+<p>local.properties を作成し、</p>
+
+<pre><code>sdk.dir=[AndroidSDK がインストールされているディレクトリの絶対パス]
+</code></pre>
+
+<p>と書き込みます。</p>
+
+<p>project.properties を編集します。</p>
+
+<pre><code>target=android-15
+</code></pre>
+
+<p>&#8220;15&#8221;はインストールされている別のAPIバージョンにしてもいいです。</p>
+
+<h3>OpenLayersをパッケージに入れます</h3>
+
+<p>OpenLayersを解凍したディレクトリに入っている OpenLayers.jsとthemesディレクトリを、assets/www/ ディレクトリ以下にコピーします。</p>
+
+<h3>assets/www/index.html を書き変えます</h3>
+
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+            &lt;title&gt;OpenLayers Map&lt;/title&gt;
+            &lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /&gt;
+            &lt;meta name="format-detection" content="telephone=no" /&gt;
+            &lt;meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" /&gt;
+            &lt;link rel="stylesheet" href="OpenLayers/theme/default/style.css" type="text/css"&gt;
+    &lt;link rel="stylesheet" href="OpenLayers/theme/default/google.css" type="text/css"&gt;
+            &lt;script src="cordova-#########js"&gt;&lt;/script&gt;
+            &lt;script src="OpenLayers/OpenLayers.js"&gt;&lt;/script&gt;
+            &lt;script type="text/javascript"&gt;
+                document.addEventListener('deviceready', function() {
+                    var map = new OpenLayers.Map( {
+                        div: "map",
+                    } );
+                    map.addControl(new OpenLayers.Control.Zoom());
+                    map.addControl(new OpenLayers.Control.Navigation({'zoomWheelEnabled': true}));
+                    map.addControl(new OpenLayers.Control.KeyboardDefaults());
+                    map.addControl(new OpenLayers.Control.TouchNavigation());
+
+                    map.addLayer( new OpenLayers.Layer.OSM( "Simple OSM Map") );
+
+                    //  とりあえず東京を中心にする
+                    map.setCenter(
+                        new OpenLayers.LonLat( 13###764772, 3###681610 ).transform(
+                                new OpenLayers.Projection("EPSG:4326"),
+                                map.getProjectionObject() ), 
+                        12 
+                    );
+
+                 }, false);
+
+            &lt;/script&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        &lt;div id="map" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0"&gt;
+            &lt;div id="location" style="position: absolute; z-index: 65535;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<h3>ビルド、インストールします</h3>
+
+<p>事前にインストール対象のデバイスをデバッグ接続しておくか、エミュレータをたちあげておきましょう</p>
+
+<pre><code>$ ant install debug
+</code></pre>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[jQuery Deferred の使い方がよくわからない]]></title>
+    <link href="http://haiiro-shimeji.github.com/blog/2012/12/12/deferred/"/>
+    <updated>2012-12-12T00:00:00+09:00</updated>
+    <id>http://haiiro-shimeji.github.com/blog/2012/12/12/deferred</id>
+    <content type="html"><![CDATA[<p>jQuery Deferred の使い方がよくわからないので、まったく今更なのですが調べた内容のメモ書きです。</p>
+
+<h4>処理を順次実行する (基本的な使い方)</h4>
+
+<p>非同期でない普通の処理を順次実行します。この例ではDeferredオブジェクトのありがたみは全くありません。</p>
+
+<pre><code>$.Deferred()
+.done( function( arg ) {
+    console.log("1:" + arg)
+} )
+.done( function( arg ) {
+    console.log("2: " + arg)
+} )
+.resolve("hogehoge")
+</code></pre>
+
+<h4>コールバックの処理結果を次のコールバックに与える</h4>
+
+<p>ただ単に処理を羅列しても面白くもなんともないので、前の処理結果を次の処理に渡して参照します。</p>
+
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function( arg ) {
+    console.log(arg)
+    return "fugafuga"
+} )
+.done( function( arg ) {
+    console.log("1st task returns " + arg)
+} )
+</code></pre>
+
+<p>pipe()に与えたコールバックが返した値は、次のコールバックに渡されます。また、done()はthis返すのに対し、pipe()はthisとは別のPromiseオブジェクトを返します。promiseオブジェクトはresolve(), reject(), promise()などの実行状態を変化させるメソッドが定義されていません。</p>
+
+<p>最初の例ではresolve()をコールバック登録後に読んでいるのに対し上の例では登録前に読んでいます(最後に呼ぶとPromiseオブジェクトに対する呼び出しになってしまうため)が、この順番はあまり関係がありません。resolve()の前に追加されたコールバックでも後に追加されたコールバックでも関係なく登録された順番に実行されていくようになっています。これはDeferredオブジェクトの内部でコールバックを管理している、$.Callbacksオブジェクトの実装によるものです。</p>
+
+<h4>あとから処理を追加する</h4>
+
+<p>一旦実行状態に入ったDeferred Objectにあとからコールバックを追加しても実行されるので、下のようにバックグラウンドのタスクキューみたいな使い方もできます。</p>
+
+<iframe style="width: 100%; height: 300px" src="http://jsfiddle.net/haiiro_shimeji/huQ44/embedded/" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+
+<h4>非同期処理をチェーンする</h4>
+
+<p>pipe()に与えたコールバックからpromiseオブジェクトを返すと、次のコールバックはその実行を待って実行されます。promiseオブジェクトのresolve()の引数に与えた値は、次のコールバックの引数になります。</p>
+
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function( arg ) {
+    return $.ajax( {
+       url: url
+    } )
+ } )
+.done( function( arg ) {
+    console.log(arg)
+} )
+.pipe( function() {
+    return $.Deferred( function(d) {
+        setTimeout( function() { 
+            d.resolve("fugafuga") 
+        }, 1000 )
+    } ).promise()
+} )
+.done( function( arg ) {
+    console.log(arg)    //fugafuga
+} )
+</code></pre>
+
+<p>$.ajax()のjQueryの非同期処理メソッドはだいたい(?)promiseオブジェクトを返すので、pipe()に与えたコールバックの戻り値として返せばよいです。jQuery Deferredと関連のない非同期処理の場合は、3つめのコールバックのように、あとからresolve()またはreject()される予定のpromiseオブジェクトを返します。</p>
+
+<h4>処理が途中で失敗したとき</h4>
+
+<p>ここまでは全てのコールバックが成功する前提で適当に組んでいましたが、人生何もかもうまくいくはずはなく当然処理の失敗というのも考えられます。$.ajax()などの非同期メソッドでは、処理に失敗すると戻り値のpromiseオブジェクトのreject()が呼び出されます (下のコードでは例のために自分で作ったpromiseオブジェクトのreject()を読んでいます)。</p>
+
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function() {
+    return $.Deferred( function(d) {
+        setTimeout( function() {
+            //何らかの理由で失敗してしまった場合、reject()を呼ぶ
+            d.reject("fugafuga") 
+        }, 1000 )
+    } ).promise()
+} )
+.fail( function( arg ) {
+    //reject()が呼び出されたDeferredオブジェクトは、fail()で登録されたコールバックが順次実行される
+} )
+.done( function( arg ) {
+    //done()で登録されたコールバックは実行されない
+} )
+.pipe( 
+    function() {
+        //pipe()の第一引数は成功時コールバック。この場合は呼ばれない
+    },
+    function() {
+        //第二引数は失敗時コールバック。こちらが呼ばれる。
+        return "error message";
+    }
+)
+.fail( function( errorMessage ) {
+    alert( errorMessage )
+} )
+.always( function() {
+    //always()で登録したコールバックは成功失敗いずれの場合にも呼ばれる。
+} )
+</code></pre>
+
+<p>処理が失敗した場合に行う処理はfail()メソッドをつかってコールバック登録します。また、pipe()も第二引数で失敗時コールバックを指定することができます。成功時コールバックと同様に、次の処理に値またはpromiseオブジェクトを引き渡すことができます。また、always()を使うと、同じコールバックをdone()とfail()で同時に登録してくれます。finally処理のように使うことができます。</p>
+
+<h4>処理が途中で失敗したがリカバリして成功ルートに戻る</h4>
+
+<p>上の例では、処理が途中で失敗した場合は成功ルートを踏み外しエラー処理をひたすら行なっていくしかないですが、実際には取得に失敗した値についてデフォルト値を使うなどでリカバリしてそのまま処理を継続したい場合があります。</p>
+
+<pre><code>$.Deferred()
+.resolve()
+.pipe( function() {
+    return $.ajax( {
+        url: "/resource"
+    } )
+} )
+.pipe(
+    function( data ) {
+        return _parse( data )
+    },
+    function() {
+        //取得に失敗した場合はデフォルト値を使い、正常処理をつづける
+        return $.Deferred().resolve( DEFAULT )
+    }
+)
+.done( function( arg ) {
+    //ajaxは失敗したが、pipeされたDeferredオブジェクトでresolve()が呼ばれたので成功ルートに戻った
+} )
+.pipe( 
+    function( data ) {
+        return $.ajax( {
+            url: data
+        } )
+    }
+)
+</code></pre>
+
+<h4>処理をフォークする</h4>
+
+<p>$.when() は複数のPromiseオブジェクトを引数に取り、それら全ての実行終了を待ち合わせるPromiseオブジェクトを返します。下の例では、ふたつのajax通信が成功するとdoneのコールバックに処理が移ります。doneのコールバックには非同期処理の結果が、when()に渡したオブジェクトの順番で引数として与えられます。</p>
+
+<p>いずれかの取得が失敗した場合、ただちにfail()に与えられたコールバックに処理が移ります。このとき他の通信が成功していたとしても全ての結果が取得できない点がポイントです。</p>
+
+<pre><code>$.when( 
+    $.ajax( {
+        url: url1,
+        data: data1
+    } ),
+    $.ajax( {
+        url: url2,
+        data: data2
+    } )
+)
+.done( function( resultFromAjax1, resultFromAjax2 ) {
+        console.log("ajax1 returns " + resultFromAjax1[0])
+        console.log("ajax2 returns " + resultFromAjax2[0])
+} )
+.fail( function( xhr, status, error ) {
+        console.log("failed: " + status)
+} )
+</code></pre>
+
+<p>失敗しても他の結果は取得したい場合はこんな感じですかね。。</p>
+
+<pre><code>$.when( 
+    $.ajax( {
+        url: url1,
+        data: data1
+    } )
+    .pipe(
+        function( result, status, xhr ) { 
+            return $.Deferred().resolve( result, status, xhr ) 
+        },
+        function( xhr, status, error ) {
+            return $.Deferred().resolve( DEFAULT, status, xhr )
+        }
+    ),
+    $.ajax( {
+        url: url2,
+        data: data2
+    } )
+    .pipe(
+    function( result, status, xhr ) { 
+            return $.Deferred().resolve( result, status, xhr ) 
+        },
+        function( xhr, status, error ) {
+            return $.Deferred().resolve( DEFAULT, status, xhr )
+        }
+    )
+)
+.done( function( resultFromAjax1, resultFromAjax2 ) {
+        console.log("ajax1 returns " + resultFromAjax1[0])
+        console.log("ajax2 returns " + resultFromAjax2[0])
+} )
+.fail( function( xhr, status, error ) {
+        console.log("failed: " + status)
+} )
+</code></pre>
+
+<p>重複コードができてしまうので、Promiseオブジェクト生成の部分は $.map() とかを使ってまとめるとよいです。</p>
+
+<h4>非同期処理をいっぱいチェーンする</h4>
+
+<p>$.when() は、ある配列について各要素に対し非同期処理を並列実行します。順次実行したい場合は以下のようにします。</p>
+
+<pre><code>var defer = $.Deferred()
+            .resolve([])
+var piped = defer
+
+$.each( urlArray, function( i, url ) {
+    piped = piped.pipe( function(results) {
+        return $.ajax( {
+           url: url
+        } )
+        .pipe( function( data, status, xhr ) {
+            results.push(data)
+        } )
+    } )
+}
+
+piped.pipe( function( results ) {
+    $.each( results, function( i, result ) {
+        console.log(result)
+    } )
+} )
+</code></pre>
+
+<h4>then()とは何だったのか</h4>
+
+<p>  jquery ver1.8.3
+  の実装では、pipe()はthen()のエイリアスということになっています。ドキュメントではthen()はむしろdone(), fail(), notify()と互換であるようなことが書かれていますが、then()とdone(), fail(), notify()では戻り値が違うので同じだと思って使うとアレなことになりそうです。</p>
+
+<pre><code>$.Deferred()
+.then( function( arg ) {
+    return "fugafuga"   //次のコールバックに値を与えられる
+} )
+.done( function( arg ) {
+    console.log(arg)
+} )
+.resolve("hogehoge")    //Promiseオブジェクトのresolve()呼び出しはerrorになる
+</code></pre>
 ]]></content>
   </entry>
   
