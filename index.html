@@ -9,7 +9,9 @@
   <meta name="author" content="haiiro.shimeji">
 
   
-  <meta name="description" content="地理情報をオープンデータ形式で配信するサーバーGeoserverのプラグイン &#8220;extension&#8221; をScalaで作成し、インストールします。 Geoserver extensionを作るのもScalaプログラムを書くのもほとんど初めてです。 とりあえず、 &hellip;">
+  <meta name="description" content="Phonegapは、基本的にはJavascriptでクロスプラットフォームなコードを記述しますが、
+プラグインとしてネイティブコードを記述することもできます。 この記事では、Phonegapで作成するAndroidアプリケーションに、Backgroun Serviceを
+追加する例を記載します。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -62,6 +64,452 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/09/28/cordova_plugin/">Phonegapアプリケーションにネイティブコードを追加する(Android)</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-09-28T00:00:00+09:00" pubdate data-updated="true">Sep 28<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Phonegapは、基本的にはJavascriptでクロスプラットフォームなコードを記述しますが、
+プラグインとしてネイティブコードを記述することもできます。</p>
+
+<p>この記事では、Phonegapで作成するAndroidアプリケーションに、Backgroun Serviceを
+追加する例を記載します。</p>
+
+<p>この例では、</p>
+
+<ul>
+<li>Android Platform Specificなリソース(この例ではJava code)の追加</li>
+<li>plugin.xmlによるAndroidManifest.xmlの変更</li>
+<li>Webアプリケーション側からのネイティブコードへのアクセス</li>
+</ul>
+
+
+<p>の3点を行う方法を示します。<br>
+他のネイティブ機能追加を行う際も、だいたいこの応用で行えると思います(たぶん)</p>
+
+<p>Phonegapのバージョンは本記事作成時の最新版3.5.0を使用します。</p>
+
+<h3>プロジェクト作成</h3>
+
+<pre><code>$ cordova create hoge
+</code></pre>
+
+<h3>プラグインディレクトリ作成</h3>
+
+<pre><code>$ cd hoge
+$ mkdir plugins/com.example.plugin
+</code></pre>
+
+<h3>ネイティブコードを配置</h3>
+
+<p>1秒おきに現在時刻をデバッグ出力するスレッドを立ち上げるだけのService実装です。
+plugins/com.example.plugin/src/android/com/example/plugin/Service.java に配置します。</p>
+
+<pre><code>package com.example.plugin;
+
+import java.util.Date;
+
+import android.content.Intent;
+import android.os.ConditionVariable;
+import android.os.IBinder;
+
+public class Service extends android.app.Service {
+
+    boolean running = false;
+    ConditionVariable condition;
+
+    static final long WAIT_TIME = 1 * 1000;
+    private final Runnable task = new Runnable() {
+        public void run() {
+            while(running) {
+                android.util.Log.e(Service.class.getCanonicalName(), new Date().toString());
+                condition.block(WAIT_TIME);
+            }
+        }
+    };
+
+    @Override
+    public void onCreate() {
+        running = true;
+        Thread thread = new Thread( null, task, this.getClass().toString() );
+        condition = new ConditionVariable( false );
+        thread.start();
+        android.util.Log.e(getClass().getCanonicalName(), "service start");
+    }
+
+    @Override
+    public void onDestroy() {
+        running = false;
+    }
+
+    @Override
+    public IBinder onBind( Intent intent ) {
+        throw new UnsupportedOperationException( "Not supported yet." );
+    }
+
+}
+</code></pre>
+
+<p>つづいて、JavaScriptからServiceを立ち上げるためのインターフェイスを用意します。
+plugins/com.example.plugin/src/android/com/example/plugin/Plugin.java に配置します。</p>
+
+<pre><code>package com.example.plugin;
+
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
+import org.json.JSONArray;
+import org.json.JSONException;
+
+import android.app.Activity;
+import android.content.Intent;
+
+public class Plugin extends CordovaPlugin {
+    @Override
+    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        if (action.equals("startService")) {
+            Activity activity = cordova.getActivity();
+            activity.startService(new Intent(
+                activity.getApplicationContext(),
+                Service.class
+            ));
+            callbackContext.success();
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+</code></pre>
+
+<p>plugins/com.example.plugin/plugin.xmlを以下の内容で作成します。</p>
+
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    id="com.example.plugin" version="0.0.1"&gt;
+    &lt;name&gt;Plugin&lt;/name&gt;
+    &lt;description&gt;plugin example&lt;/description&gt;
+    &lt;license&gt;MIT&lt;/license&gt;
+    &lt;keywords&gt;&lt;/keywords&gt;
+    &lt;platform name="android"&gt;
+        &lt;config-file target="res/xml/config.xml" parent="/*"&gt;
+            &lt;feature name="PluginExample" &gt;
+                &lt;param name="android-package" value="com.example.plugin.Plugin"/&gt;
+                &lt;param name="onload" value="true" /&gt;
+            &lt;/feature&gt;
+        &lt;/config-file&gt;
+        &lt;config-file target="AndroidManifest.xml" parent="/manifest/application"&gt;
+            &lt;service android:name="com.example.plugin.Service" /&gt;
+        &lt;/config-file&gt;
+        &lt;source-file src="src/android/com/example/plugin/Plugin.java" target-dir="src/com/example/plugin" /&gt;
+        &lt;source-file src="src/android/com/example/plugin/Service.java" target-dir="src/com/example/plugin" /&gt;
+    &lt;/platform&gt;
+&lt;/plugin&gt;
+</code></pre>
+
+<p>&lt;plugin&gt;要素のid属性には、プラグインディレクトリの名称と同じ文字列を指定してください。<br>
+&lt;platform&gt;要素にはpluginがインストール可能な各プラットフォームが必要な情報を記述する必要があります。この例ではandroidへの情報のみを記載しています。<br>
+&lt;config-file&gt;要素ではplatform/android以下のxmlファイルを改変するための情報を記述することが出来ます。<br>
+target属性で目的のファイルを指定し、parent属性で内容を書き込む対象となる要素を指定しています。&#8221;/*&#8221;というのは、任意のトップレベル要素に指定内容を書き込むという意味です。<br>
+上記の方法で指定されたXMLファイルの対象要素内に、&lt;config-file&gt;要素の子要素がそのまま書き込まれることになります。</p>
+
+<p>上記例ではconfig.xmlにプラグインインターフェイスの登録設定と、AndroidManifest.xmlへのサービス登録設定が書き込まれています。<br>
+この方法で、Permissionの追加やReceiverの登録なども同様に行うことが出来ます。</p>
+
+<p>また、&lt;source-file&gt;要素ではプラグインのディレクトリからplatform/androidのディレクトリへファイルをコピーするための情報を記述することが出来ます。</p>
+
+<p>今回の例ではJavaソースコードのみをコピーしていますが、コピー対象のディレクトリにはsrc/以外を指定することも可能なので、同様にres/やlib/などに配置したいファイルを記述することで、ビルドに組み込むことが可能です。</p>
+
+<p>以上でプラグイン側の実装は終了です。さいごにWebアプリケーションからプラグインのインターフェイスを利用するコードを追加します。</p>
+
+<pre><code>$ vi www/js/index.js
+</code></pre>
+
+<p>devicereadyイベントのコールバック部分に以下のコードを追加します。<br>
+devicereadyイベント取得後に実行しないと、cordovaオブジェクトが未初期化状態でエラーになります。</p>
+
+<pre><code>cordova.exec(
+    function() {},
+    function() {
+        console.log('startService is failed.');
+    },
+    "PluginExample", "startService",
+    []
+);
+</code></pre>
+
+<h3>ビルドと実行</h3>
+
+<p>プラグインをplatform/androidに追加します。プラグインの配置は、プラットフォームディレクトリの新規作成時にのみ行われます。</p>
+
+<p>$ cordova platform remove android &amp;&amp; cordova platform add android</p>
+
+<p>cordova platform update android でプラグインのアップデートも行われるのではないかと期待したのですが、updateコマンドはAndroidSDKのバージョンアップが行われるだけのようで、プラグインの更新は行われませんでした。プラグインを編集した際は毎回プラットフォームディレクトリを作成し直すことになります。</p>
+
+<p>ビルド</p>
+
+<pre><code>$ cordova build android
+</code></pre>
+
+<p>あらかじめ実機端末の接続またはエミュレータの起動を行っておいて、インストール</p>
+
+<pre><code>$ adb install -r platforms/android/ant-build/HelloCordova-debug.apk
+</code></pre>
+
+<p>アプリケーションを起動しlogcatで端末ログを表示すると、実装したServiceによって毎秒ログが出力されているのが確認できると思います。</p>
+
+<h3>ネイティブコードのテスト</h3>
+
+<p>ざんねんながら、現在はプラグインのテストを構成するきまった方法は無いようです。ただ、pluginディレクトリの中身はかなり自由な構成が可能なので、僕はsrc/android以下にpom.xmlファイルをおいてMaven Androidプロジェクトを構成しています。<br>
+最終的にsource-fileタグの設定によりプラットフォームディレクトリ内で所定の構成になれば、プラグインディレクトリはどのような配置でもいいようです。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/04/01/ionic_etcetc/">Yeomanで作ったIonic+AngularJS+PhoneGapなWebアプリのKarma+mocha+chaiなテストをJenkinsで実行するよ！</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-01T00:00:00+09:00" pubdate data-updated="true">Apr 1<span>st</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>タイトルの通り、Yeomanで作ったIonic+AngularJSなWebアプリをPhoneGapでネイティブアプリにするプロジェクトを構築し、
+テストをmocha+chaiで記述してKarmaで実行できるようにし、Jenkinsで定期ジョブにする手順を記述するエントリです。</p>
+
+<p>登場人物が多すぎて自分でも意味不明になってきたので、整理の意味でブログに書いときます。</p>
+
+<h3>用語</h3>
+
+<p>まずは上述の用語の乱雑なまとめ</p>
+
+<h6>Yeoman</h6>
+
+<p>アプリケーションのひな形を作成してくれるツール</p>
+
+<h6>grunt</h6>
+
+<p>ビルドツール</p>
+
+<h6>bower</h6>
+
+<p>javascriptライブラリの管理ツール</p>
+
+<h6>npm</h6>
+
+<p>node.jsライブラリの管理ツール</p>
+
+<p>まだ使い始めたばかりなのでアレですが、Yeoman+grunt+bower+npmでJavaのMavenみたいなことが出来るという
+理解でいいのかな。便利っぽいです。</p>
+
+<h6>Ionic</h6>
+
+<p>AngularJSに依存したモバイルWebアプリのUIライブラリ。
+Phonegapでの利用も想定して作られているようなので、使ってみました。
+AngularJSはただのWebアプリ用のフレームワークなので、モバイル端末に対応するためには
+何らかのUIライブラリが必要です。</p>
+
+<h6>AngularJS</h6>
+
+<p>有名なJavascript MVCフレームワークです</p>
+
+<h6>Karma</h6>
+
+<p>テストランナーです</p>
+
+<h6>mocha</h6>
+
+<p>テストフレームワークです</p>
+
+<h6>chai</h6>
+
+<p>アサーションライブラリです</p>
+
+<p>Javascriptだとテスト関係のライブラリが機能別に細かく分かれているのでややこしいですね。</p>
+
+<h6>PhoneGap</h6>
+
+<p>WebアプリをWebView上でで動くネイティブアプリにするライブラリ。
+ハードウェア機能もJavascriptで使えるインターフェイスが用意されていてクロスプラットフォームなアプリを作れる</p>
+
+<h3>開発環境の構築</h3>
+
+<p>概念はややこしいですが、手順がワークフロー化されているので、やることは簡単です。</p>
+
+<p>まずは一連の操作で利用するライブラリをインストールしましょう。rubyとかgemとかnpmとかはすでに入っているかんじで、</p>
+
+<pre><code># gem install compass
+# npm install -g bower grunt-cli yo yeoman-generator generator-ionicjs karma-junit-reporter
+# npm install -g phonegap cordova
+</code></pre>
+
+<p>続いて、実際のプロジェクトを作成していきます。</p>
+
+<pre><code>$ mkdir ionicSample
+$ cd ionicSample
+$ yo ionicjs
+
+    _             _
+   (_)           (_)
+    _  ___  _ __  _  ___
+   | |/ _ \| '_ \| |/ __|
+   | | (_) | | | | | (__
+   |_|\___/|_| |_|_|\___|
+
+[?] Would you like to use Sass with Compass (requires Ruby)? (y/N) y
+Created a new Cordova project with name "IonicSample" and id "com.example.IonicSample"
+[?] Which Cordova plugins would you like to include? (Press &lt;space&gt; to select)
+‣⬢ org.apache.cordova.console
+ ⬢ org.apache.cordova.device
+ ⬡ org.apache.cordova.network-information
+ ⬡ org.apache.cordova.splashscreen
+ ⬡ org.apache.cordova.battery-status
+ ⬡ org.apache.cordova.statusbar
+ ⬡ org.apache.cordova.device-motion
+[?] Which Cordova plugins would you like to include? org.apache.cordova.console, org.apache.cordova.device
+[?] Which starter app template which you like to use? 
+  Blank 
+  Tabs 
+  Side Menu 
+‣ Pets Seed 
+</code></pre>
+
+<p>まず、Compassを使うかどうか、つづいてインポートするphonegapライブラリの選択を行います。
+最後にひな形の種類を聞かれます。実際に開発する場合は余計なものが無い方がいいかもしれませんが、
+ここではあるていどコンテンツが用意されているPet Seedを選択します。</p>
+
+<p>パッケージビルドするプラットフォームを追加します。ここではandroidを扱います。
+あ、AndroidSDKはすでに適当に入ってる感じでおねがいします。</p>
+
+<pre><code>$ cordova platform add android
+</code></pre>
+
+<p>ビルドします。</p>
+
+<pre><code>$ grunt build
+</code></pre>
+
+<p>これでもう、./platforms/android/ant-build に動作可能なパッケージができました。マジお手軽。</p>
+
+<p>それでは、実行してみましょう。テスト用の端末をUSB接続するか、エミュレータを立ちあげておいて、</p>
+
+<pre><code>$ cordova run android
+</code></pre>
+
+<p>実行出来ましたか？実行出来ましたね。</p>
+
+<h3>テスト</h3>
+
+<p>単体テストを実行します。テストはすでに ./test/spec/ 以下にサンプルがありますので、これを実行します。
+karmaといえば、ファイルの変更を検知して実行してくれる監視機能が特長のようですが、
+ここでは、最終的にはJenkinsのジョブとして扱いたいので、コマンドライン実行します。</p>
+
+<p>とはいえ、すでにすべての準備は整っていて、</p>
+
+<pre><code>$ grunt karma:continuous
+
+Running "karma:continuous" (karma) task
+WARN [karma]: Port 8080 in use
+INFO [karma]: Karma v0.12.2 server started at http://localhost:8081/
+INFO [launcher]: Starting browser PhantomJS
+WARN [watcher]: Pattern "/path/to/ionicSample/test/mock/**/*.js" does not match any file.
+INFO [PhantomJS 1.9.7 (Linux)]: Connected on socket jd_w9g872hnwnSfMdscZ with id 60562257
+.
+PhantomJS 1.9.7 (Linux): Executed 1 of 1 SUCCESS (0.039 secs / 0.001 secs)
+
+=============================== Coverage summary ===============================
+Statements   : 81.82% ( 9/11 )
+Branches     : 100% ( 0/0 )
+Functions    : 66.67% ( 4/6 )
+Lines        : 81.82% ( 9/11 )
+================================================================================
+
+Done, without errors.
+
+
+Execution Time (2014-04-01 08:45:17 UTC)
+karma:continuous  1.6s  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇ 100%
+Total 1.6s
+</code></pre>
+
+<p>できました。いたれり尽くせりすぎて怖い。</p>
+
+<p>ちなみに、karmaの監視を開始する場合は grunt test とやってください。</p>
+
+<p>テストのコマンドライン実行はできましたが、jenkinsにジョブ登録してテストの定期実行結果を評価するには
+テスト結果をファイル出力する必要があります。</p>
+
+<p>JUnit形式Reporterの追加</p>
+
+<pre><code>$ npm install karma-junit-reporter --save-dev
+</code></pre>
+
+<p>Gruntfile の、karma.options.reporters を修正します</p>
+
+<pre><code>$ vi Gruntfile.js
+reporters: ['junit', 'dots', 'coverage'],   #&lt;- 'junit'を追加
+</code></pre>
+
+<p>再度テスト実行</p>
+
+<pre><code>$ grunt karma:continuous
+</code></pre>
+
+<p>JUnit形式の結果ファイル test-results.xml ができていると思います。</p>
+
+<p>Jenkinsには、このテスト実行コマンドと結果ファイルを登録しておけば継続的インテグレーションができるようになります。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -683,6 +1131,14 @@ piped.pipe( function( results ) {
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/09/28/cordova_plugin/">Phonegapアプリケーションにネイティブコードを追加する(Android)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/01/ionic_etcetc/">Yeomanで作ったIonic+AngularJS+PhoneGapなWebアプリのKarma+mocha+chaiなテストをJenkinsで実行するよ！</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2013/06/25/geoserver_scala/">Geoserver extensionをScalaで作成する</a>
       </li>
     
@@ -708,7 +1164,7 @@ piped.pipe( function( results ) {
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2013 - haiiro.shimeji -
+  Copyright &copy; 2014 - haiiro.shimeji -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
