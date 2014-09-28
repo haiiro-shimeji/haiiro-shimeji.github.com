@@ -242,10 +242,7 @@ target属性で目的のファイルを指定し、parent属性で内容を書�
 
 <p>以上でプラグイン側の実装は終了です。さいごにWebアプリケーションからプラグインのインターフェイスを利用するコードを追加します。</p>
 
-<pre><code>$ vi www/js/index.js
-</code></pre>
-
-<p>devicereadyイベントのコールバック部分に以下のコードを追加します。<br>
+<p>www/js/index.jsのdevicereadyイベントのコールバック部分に以下のコードを追加します。<br>
 devicereadyイベント取得後に実行しないと、cordovaオブジェクトが未初期化状態でエラーになります。</p>
 
 <pre><code>cordova.exec(
