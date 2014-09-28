@@ -259,7 +259,8 @@ devicereadyイベント取得後に実行しないと、cordovaオブジェク�
 
 <p>プラグインをplatform/androidに追加します。プラグインの配置は、プラットフォームディレクトリの新規作成時にのみ行われます。</p>
 
-<p>$ cordova platform remove android &amp;&amp; cordova platform add android</p>
+<pre><code>$ cordova platform remove android &amp;&amp; cordova platform add android
+</code></pre>
 
 <p>cordova platform update android でプラグインのアップデートも行われるのではないかと期待したのですが、updateコマンドはAndroidSDKのバージョンアップが行われるだけのようで、プラグインの更新は行われませんでした。プラグインを編集した際は毎回プラットフォームディレクトリを作成し直すことになります。</p>
 
