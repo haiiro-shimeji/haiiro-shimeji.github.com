@@ -1,0 +1,180 @@
+---
+layout: post
+title: "Phonegapアプリケーションにネイティブコードを追加する(Android)"
+date: 2014-09-28
+comments: true
+categories:
+---
+Phonegapは、基本的にはJavascriptでクロスプラットフォームなコードを記述しますが、
+プラグインとしてネイティブコードを記述することもできます。
+
+この記事では、Phonegapで作成するAndroidアプリケーションに、Backgroun Serviceを
+追加する例を記載します。
+
+この例では、
+
+* Android Platform Specificなリソース(この例ではJava code)の追加
+* plugin.xmlによるAndroidManifest.xmlの変更
+* Webアプリケーション側からのネイティブコードへのアクセス
+
+の3点を行う方法を示します。<br>
+他のネイティブ機能追加を行う際も、だいたいこの応用で行えると思います(たぶん)
+
+Phonegapのバージョンは本記事作成時の最新版3.5.0を使用します。
+
+### プロジェクト作成
+    $ cordova create hoge
+
+### プラグインディレクトリ作成
+    $ cd hoge
+    $ mkdir plugins/com.example.plugin
+
+### ネイティブコードを配置
+1秒おきに現在時刻をデバッグ出力するスレッドを立ち上げるだけのService実装です。
+plugins/com.example.plugin/src/android/com/example/plugin/Service.java に配置します。
+
+    package com.example.plugin;
+
+    import java.util.Date;
+
+    import android.content.Intent;
+    import android.os.ConditionVariable;
+    import android.os.IBinder;
+
+    public class Service extends android.app.Service {
+
+        boolean running = false;
+        ConditionVariable condition;
+
+        static final long WAIT_TIME = 1 * 1000;
+        private final Runnable task = new Runnable() {
+            public void run() {
+                while(running) {
+                    android.util.Log.e(Service.class.getCanonicalName(), new Date().toString());
+                    condition.block(WAIT_TIME);
+                }
+            }
+        };
+
+        @Override
+        public void onCreate() {
+            running = true;
+            Thread thread = new Thread( null, task, this.getClass().toString() );
+            condition = new ConditionVariable( false );
+            thread.start();
+            android.util.Log.e(getClass().getCanonicalName(), "service start");
+        }
+
+        @Override
+        public void onDestroy() {
+            running = false;
+        }
+
+        @Override
+        public IBinder onBind( Intent intent ) {
+            throw new UnsupportedOperationException( "Not supported yet." );
+        }
+
+    }
+
+つづいて、JavaScriptからServiceを立ち上げるためのインターフェイスを用意します。
+plugins/com.example.plugin/src/android/com/example/plugin/Plugin.java に配置します。
+
+    package com.example.plugin;
+
+    import org.apache.cordova.CallbackContext;
+    import org.apache.cordova.CordovaPlugin;
+    import org.json.JSONArray;
+    import org.json.JSONException;
+
+    import android.app.Activity;
+    import android.content.Intent;
+
+    public class Plugin extends CordovaPlugin {
+        @Override
+        public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+            if (action.equals("startService")) {
+                Activity activity = cordova.getActivity();
+                activity.startService(new Intent(
+                    activity.getApplicationContext(),
+                    Service.class
+                ));
+                callbackContext.success();
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+plugins/com.example.plugin/plugin.xmlを以下の内容で作成します。
+
+    <?xml version="1.0" encoding="UTF-8"?>
+    <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        id="com.example.plugin" version="0.0.1">
+        <name>Plugin</name>
+        <description>plugin example</description>
+        <license>MIT</license>
+        <keywords></keywords>
+        <platform name="android">
+            <config-file target="res/xml/config.xml" parent="/*">
+                <feature name="PluginExample" >
+                    <param name="android-package" value="com.example.plugin.Plugin"/>
+                    <param name="onload" value="true" />
+                </feature>
+            </config-file>
+            <config-file target="AndroidManifest.xml" parent="/manifest/application">
+                <service android:name="com.example.plugin.Service" />
+            </config-file>
+            <source-file src="src/android/com/example/plugin/Plugin.java" target-dir="src/com/example/plugin" />
+            <source-file src="src/android/com/example/plugin/Service.java" target-dir="src/com/example/plugin" />
+        </platform>
+    </plugin>
+
+&lt;plugin&gt;要素のid属性には、プラグインディレクトリの名称と同じ文字列を指定してください。<br>
+&lt;platform&gt;要素にはpluginがインストール可能な各プラットフォームが必要な情報を記述する必要があります。この例ではandroidへの情報のみを記載しています。<br>
+&lt;config-file&gt;要素ではplatform/android以下のxmlファイルを改変するための情報を記述することが出来ます。<br>
+target属性で目的のファイルを指定し、parent属性で内容を書き込む対象となる要素を指定しています。"/\*"というのは、任意のトップレベル要素に指定内容を書き込むという意味です。<br>
+上記の方法で指定されたXMLファイルの対象要素内に、&lt;config-file&gt;要素の子要素がそのまま書き込まれることになります。
+
+上記例ではconfig.xmlにプラグインインターフェイスの登録設定と、AndroidManifest.xmlへのサービス登録設定が書き込まれています。<br>
+この方法で、Permissionの追加やReceiverの登録なども同様に行うことが出来ます。
+
+また、&lt;source-file&gt;要素ではプラグインのディレクトリからplatform/androidのディレクトリへファイルをコピーするための情報を記述することが出来ます。
+
+今回の例ではJavaソースコードのみをコピーしていますが、コピー対象のディレクトリにはsrc/以外を指定することも可能なので、同様にres/やlib/などに配置したいファイルを記述することで、ビルドに組み込むことが可能です。
+
+
+以上でプラグイン側の実装は終了です。さいごにWebアプリケーションからプラグインのインターフェイスを利用するコードを追加します。
+
+www/js/index.jsのdevicereadyイベントのコールバック部分に以下のコードを追加します。<br>
+devicereadyイベント取得後に実行しないと、cordovaオブジェクトが未初期化状態でエラーになります。
+
+    cordova.exec(
+        function() {},
+        function() {
+            console.log('startService is failed.');
+        },
+        "PluginExample", "startService",
+        []
+    );
+
+### ビルドと実行
+プラグインをplatform/androidに追加します。プラグインの配置は、プラットフォームディレクトリの新規作成時にのみ行われます。
+
+    $ cordova platform remove android && cordova platform add android
+
+cordova platform update android でプラグインのアップデートも行われるのではないかと期待したのですが、updateコマンドはAndroidSDKのバージョンアップが行われるだけのようで、プラグインの更新は行われませんでした。プラグインを編集した際は毎回プラットフォームディレクトリを作成し直すことになります。
+
+ビルド
+    $ cordova build android
+
+あらかじめ実機端末の接続またはエミュレータの起動を行っておいて、インストール
+    $ adb install -r platforms/android/ant-build/HelloCordova-debug.apk
+
+アプリケーションを起動しlogcatで端末ログを表示すると、実装したServiceによって毎秒ログが出力されているのが確認できると思います。
+
+### ネイティブコードのテスト
+
+ざんねんながら、現在はプラグインのテストを構成するきまった方法は無いようです。ただ、pluginディレクトリの中身はかなり自由な構成が可能なので、僕はsrc/android以下にpom.xmlファイルをおいてMaven Androidプロジェクトを構成しています。<br>
+最終的にsource-fileタグの設定によりプラットフォームディレクトリ内で所定の構成になれば、プラグインディレクトリはどのような配置でもいいようです。
