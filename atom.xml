@@ -1,1238 +1,931 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[My Octopress Blog]]></title>
+  <title><![CDATA[あきらめがちなブログ]]></title>
   <link href="http://haiiro-shimeji.github.com/atom.xml" rel="self"/>
   <link href="http://haiiro-shimeji.github.com/"/>
-  <updated>2015-09-04T21:28:57+09:00</updated>
+  <updated>2015-09-04T21:31:18+09:00</updated>
   <id>http://haiiro-shimeji.github.com/</id>
   <author>
-    <name><![CDATA[Your Name]]></name>
+    <name><![CDATA[haiiro.shimeji]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
   
   <entry>
-    <title type="html"><![CDATA[Git Branch]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2015/09/04/git-branch/"/>
-    <updated>2015-09-04T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2015/09/04/git-branch</id>
-    <content type="html"><![CDATA[<p>ここからは、現実の開発で発生しがちなケースとその対応を検討してみます。</p>
+    <title type="html"><![CDATA[Phonegapアプリケーションにネイティブコードを追加する(Android)]]></title>
+    <link href="http://haiiro-shimeji.github.com/blog/2014/09/28/cordova_plugin/"/>
+    <updated>2014-09-28T00:00:00+09:00</updated>
+    <id>http://haiiro-shimeji.github.com/blog/2014/09/28/cordova_plugin</id>
+    <content type="html"><![CDATA[<p>Phonegapは、基本的にはJavascriptでクロスプラットフォームなコードを記述しますが、
+プラグインとしてネイティブコードを記述することもできます。</p>
 
-<h2>1.x-betaデバッグ中にリリースに含めるべき機能が追加される</h2>
+<p>この記事では、Phonegapで作成するAndroidアプリケーションに、Backgroun Serviceを
+追加する例を記載します。</p>
 
-<pre><code>「ねえねえ、今度リリース予定のバージョンなんだけど、作成中の○○の機能は入るの？」  
-「いや、その機能は次のリリースで追加される予定ですが」  
-「ええっ困るよ！まだデバッグ始まったばかりでしょ？今から○○も入れてリリースしてよ」  
-「」
-</code></pre>
-
-<p>まだ1.xデバッグ中ということで、1.(x+1)は開発初期という可能性が高いです。</p>
-
-<p>もし、該当のフィーチャーブランチがまだdevelopにマージされていなければ、フィーチャーブランチの開発が終わったら、developにマージせずに即時releaseにマージしてしまいましょう。すでにdevelopにマージ済みという場合は、上述のようにマージ段階のフィーチャーブランチの先頭コミットを調べて、それをreleaseにマージします。</p>
-
-<pre><code>$ git log develop
-
-commit e3d4e28365998b0d5f58b4e6c7b8f7e5cc68349e
-Merge: 3804264 a1d81d8
-Author: ikeda.shoichi &lt;ikeda.shoichi@localhost&gt;
-Date:   2015-09-02 14:09:22 +0900
-
-    Merge branch 'newFeatureA' into develop
-
-$ git checkout release
-$ git merge a1d81d8 --no-ff
-</code></pre>
-
-<p>その後、releaseをdevelopにマージします。該当機能に関するバグフィックスなどが発生したら、他のreleaseで修正されるバグと同様に、releaseにコミットしてdevelopにマージします。</p>
-
-<p>1.(x+1)が開発初期ということで、フィーチャーブランチをreleaseにマージする際に衝突は発生しない場合が多いでしょう。しないといいですね。衝突してしまった場合はかなり面倒な作業でコミットの切り分けをする必要があります。本質的には次項と同じなので、そちらを参照してください。</p>
-
-<h2>当初予定されていた機能を削ったバージョンを前倒しでリリースすることになった</h2>
-
-<pre><code>「ねえねえ、○○の機能が入る次のバージョンっていつリリースなの？」  
-「△月の予定ですが」  
-「遠いなあ…○○をすぐに使いたいっていうお客さんがいるから、○○だけ入れて前倒しでリリースしてよ」  
-「」
-</code></pre>
-
-<p>ほとんど最悪な状況なのですが、実際にはよく起こります。世の中の人は、機能どうしの依存関係などは考慮に入れることなく、単純な足し算引き算で機能の着脱、納期の伸縮が可能であると思っています。</p>
-
-<p>バージョン1.xとして複数の機能を開発している途中で、そのなかのひとつだけを実装に含めてreleaseブランチを作成し、リリース作業を開始することになります。</p>
-
-<p>まず、前回リリース時のreleaseブランチを復活させ、次回リリースに使うreleaseブランチとします。前回リリース時のreleaseブランチは、masterへのマージログから参照することが出来ます。</p>
-
-<pre><code>$ git log master
-commit 017a9a034d8d2be74a72563b69e370ee9188bb26
-Merge: ec2ecd9 da06717
-Author: ikeda.shoichi &lt;ikeda.shoichi@localhost&gt;
-Date:   2015-09-02 06:01:59 +0900
-
-    Merge branch 'release' into master
-
-$ git checkout da06717
-$ git checkout -b release
-</code></pre>
-
-<p>そこに該当機能のフィーチャーブランチをマージして新しいバージョンのリリース作業を開始します。<br/>
-マージ時に運良く衝突が発生しなければラッキーですが、衝突してしまった場合は、developブランチ上で該当のフィーチャーブランチがマージされるまでの間にされたコミットのうち、このブランチが依存するものだけを選択してreleaseブランチにcherry-pickしていく必要があります。ここまでの開発で、適切なコミット粒度を維持できていたかが問われます。releaseに首尾よくマージできても、developに再度マージする際にも多分衝突が発生します。あきらめずにがんばりましょう。</p>
-
-<h2>後方互換性の無いバージョン2.0の開発と1.xの開発に分化する</h2>
-
-<p>「ねえねえ、次のバージョンではP○P 5.1のサポートを切るって聞いたけど」
-「はい、もうセキュリティ上の理由で古いバージョンは使われないと判断しました。その場合、古いバージョンで許される記述のみで開発を続けるのは、開発コスト的にも高くなるので」
-「お客さんのサーバーで、事情があってP○Pのバージョンを上げられないところがあって、古いバージョンでも動く形で、バグフィックスとかだけ適用していって欲しいんだけど」
-「」</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[gitのブランチ運用とgit flow]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2015/09/02/git-flow/"/>
-    <updated>2015-09-02T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2015/09/02/git-flow</id>
-    <content type="html"><![CDATA[<p>gitでのブランチ運用においてよく使われるモデルに、&#8221;A successful Git branching model&#8221;というのがあります。</p>
-
-<p>http://keijinsonyaban.blogspot.jp/2010/10/successful-git-branching-model.html<br/>
-に邦訳があるので詳細についてはこちらを読んでいただくとよいと思うのですが、かいつまんで言うと
-、プログラムに発生する修正を以下の3つに分けて異なるブランチで管理するというものです。</p>
+<p>この例では、</p>
 
 <ul>
-<li>リリース済み製品に対して迅速に修正するべきバグの修正</li>
-<li>リリースにあたっての安定動作のためのバグ修正</li>
-<li>機能追加</li>
+<li>Android Platform Specificなリソース(この例ではJava code)の追加</li>
+<li>plugin.xmlによるAndroidManifest.xmlの変更</li>
+<li>Webアプリケーション側からのネイティブコードへのアクセス</li>
 </ul>
 
 
-<p>これらの修正は互いに求められる信頼度が異なるため、区別なく扱われてしまうとソフトウェア全体の信頼度として期待する状態でのリリースが難しくなります。このために、各々の修正を適用するブランチを区別し適宜マージを繰り返しながらリリースを行っていくのが、このモデルの基本的なブランチの運用になります。</p>
+<p>の3点を行う方法を示します。<br>
+他のネイティブ機能追加を行う際も、だいたいこの応用で行えると思います(たぶん)</p>
 
-<p>この &#8220;A successful Git branching model&#8221; の運用をサポートするのが、git-flowになります。<br/>
-ここでは、GitのGUIクライアントである SourceTree を使って、実際のユースケースに則してgit-flowおよび &#8220;A successful Git branching model&#8221; の運用を解説します。<br/>
-しかし、じつはこのモデル運用にgit-flowは必須ではありません。git-flowは複数のgitコマンドをモデル運用に適するようにマクロ化したもので、それを普通のgitで行ったとしても、それほど複雑ではなく十分可能です。<br/>
-以下の記述では、git-flowを使わずに操作する場合も考慮して各々の操作において内部的に何を行っているのかとブランチの状況などを適宜図示していきます。</p>
+<p>Phonegapのバージョンは本記事作成時の最新版3.5.0を使用します。</p>
 
-<h1>運用手順</h1>
+<h3>プロジェクト作成</h3>
 
-<h2>git flow の初期化</h2>
-
-<p>まずは、git-flowの初期化を行います。ウィンドウ上部のツールアイコンの&#8221;Git Flow&#8221;をクリックします。<br/>
-これは、開発の一番最初に行うべきですが、すでにmaster上である程度初期開発を行ったあとで初期化しても全く問題はありません。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-init.png" alt="git flow init" /></p>
-
-<p>すると、下のようなダイアログが現れます。すべてデフォルト値で問題ないので、&#8221;OK&#8221;をクリックします。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-init-dialog.png" alt="git flow init dialog" /></p>
-
-<p>ブランチ&#8221;develop&#8221;が作成され、現在のブランチがdevelopに切り替わります。また、.git/configにこの設定ダイアログで指定したブランチ名とブランチ名プレフィックスが書き込まれ、今後のgit-flow操作で参照されるようになります。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-init-result.png" alt="git flow init result" /></p>
-
-<p>この後は、開発は基本的にdevelopで行うこととし、masterはリリース済みのコミットが蓄積されていくことになります。</p>
-
-<h2>フィーチャーブランチの作成</h2>
-
-<p>機能開発は、フィーチャーブランチ上で行います。ウィンドウ上部のツールアイコンの&#8221;Git Flow&#8221;をクリックします。<br/>
-下のようなダイアログが現れるので、&#8221;新規フィーチャーを開始&#8221;をクリックします。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-start.png" alt="git flow feature start" /></p>
-
-<p>これからこのフィーチャーブランチ上で開発する機能を端的に表す名前を入力し、&#8221;OK&#8221;をクリックします。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-start-name.png" alt="git flow feature start name" /></p>
-
-<p>これで、機能開発用のフィーチャーブランチ&#8221;feature/newFeatureA&#8221;が作成され、現在のブランチが移動します。機能開発は、複数人開発では一般的に並行して行われます。フィーチャーブランチは複数同時に作成され、別個に進行していきます。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-branches.png" alt="git flow feature branches" /></p>
-
-<h2>フィーチャーブランチのマージ</h2>
-
-<p>機能開発が完了したら、フィーチャーブランチを終了しdevelopにマージします。フィーチャーブランチ上でウィンドウ上部のツールアイコンの&#8221;Git Flow&#8221;をクリックします。下のようなダイアログが現れるので、&#8221;現在のブランチを終了&#8221;をクリックします。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-finish.png" alt="git flow feature finish" /></p>
-
-<p>下のようなダイアログが現れるので、&#8221;OK&#8221;をクリックします。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-finish-dialog.png" alt="git flow feature finish dialog" /></p>
-
-<p>この操作では、フィーチャーブランチのdevelopへのマージと、それが成功すればdevelopへの移動、フィーチャーブランチの削除を行います。<br/>
-しかし、通常はすんなりマージされるのですが、当然競合が発生する可能性もあります。今回は、newFeatureAのマージ前に別のnewFeatureBのマージを行っておき、競合が発生する変更を用意しておきました。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-finish-conflict.png" alt="git flow feature finish conflict" /></p>
-
-<p>競合を解消し、コミットします。グラフは下のようになります。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-finish-graph.png" alt="git flow feature finish graph" /></p>
-
-<p>&#8220;現在のブランチを終了&#8221;すると、通常はそのままブランチは削除されますが、衝突が発生した場合はマージ後もブランチが残るので、手動で削除する必要があります。</p>
-
-<h2>フィーチャーブランチの継続開発</h2>
-
-<p>フィーチャーブランチを一旦マージした後、またすぐに修正する必要が発生したとします。一機能に対する修正はできるだけひとつのフィーチャーブランチにまとめたほうがいいので、先ほどマージしたフィーチャーブランチを復活させて再度修正してみます。</p>
-
-<p>マージしたブランチのHEADは、マージコミットの中に記録されています。このコミットから再度ブランチを作成します。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-finish-remake.png" alt="git flow feature finish remake" /></p>
-
-<p>ウィンドウ上部ツールバーの「ブランチ」をクリックします。ブランチ設定ウィンドウが現れるので、下のように入力します。ブランチ名には削除する前の&#8221;feature/newFeatureA&#8221;を指定(別の名称でもいいのですが、機能の開発を継続するという意味で同じ名前にします)、「指定のコミット」に指定するコミットは、先ほどコミットログから確認したコミットを選択してください。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-branch.png" alt="git flow feature finish remake" /></p>
-
-<p>その後、フィーチャーブランチ上でさらに開発し、ふたたび「ブランチの終了」によってマージすると下のようになります。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-feature-remerge-graph.png" alt="git flow feature remerge graph" /></p>
-
-<h2>リリース工程</h2>
-
-<p>必要な機能の開発がひととおり終了し、リリースの準備に入るとします。<br/>
-リリースの際は検証工程(テスト)を行い、バグ修正を行う必要があります。この期間にもし別のメンバーによって(今回のリリースには入らない)新機能が追加されてしまうと、リリースされるプロダクトに求められる信頼度に至らないコードが混入してしまうことになります。<br/>
-これを避けるために、リリース工程用のブランチを切って、ここでデバッグと修正作業を行います。</p>
-
-<p>ウィンドウ上部のツールアイコンの&#8221;Git Flow&#8221;をクリックします。現れたウィンドウで「新規リリースを開始」をクリックします。下のようなダイアログが現れるので、「リリースバージョン」に今回のリリースバージョンを入力します。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-release-start.png" alt="git flow release start" /></p>
-
-<p>この操作で、リリースブランチrelease/1.0が作成され、現在のブランチがそれに変更されます。ここで、デバッグおよびリリースに必要なバグ修正などの要修正点の適用を行っていきます。<br/>
-また、この間に別のメンバーによって将来のリリースのための新しい機能を開発する場合は、以前の手順と同様の「新規フィーチャーを開始」から作成することが出来ます。<br/>
-releaseブランチとフィーチャーブランチは完全に分けられ、互いに干渉することはありません。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-release-graph.png" alt="git flow release graph" /></p>
-
-<p>検証工程が完了し、リリースのタイミングになったら、ウィンドウ上部のツールアイコンの&#8221;Git Flow&#8221;をクリックします。現れたウィンドウで「現在のブランチを終了」をクリックします。下のようなダイアログが現れるので、「OK」をクリックしてください。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-release-finish-dialog.png" alt="git flow release finish dialog" /></p>
-
-<p>リリースブランチの終了では、いくつの操作が同時に行われます。</p>
-
-<ul>
-<li>release/1.0のmasterへのマージ</li>
-<li>masterのHEADにタグ(1.0)の付加</li>
-<li>release/1.0のdevelopへのマージ</li>
-<li>release/1.0の削除</li>
-</ul>
-
-
-<p>結果として、以下のような状態になります。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-release-finish-graph.png" alt="git flow release finish graph" /></p>
-
-<p>タグ1.0(または現在のmasterの状態)が、バージョン1.0でリリースするべき状態になります。これをcloneなどをしてデプロイします。</p>
-
-<h2>緊急修正</h2>
-
-<p>バージョン1.0のリリースが完了し、次のバージョンアップに向けてdevelopブランチで開発を続けているところに、リリース済みの1.0に致命的でバグが発見され、緊急で修正の必要があるとします。<br/>
-このようなときは、hotfixブランチを作成して対応することになります。</p>
-
-<p>ウィンドウ上部のツールアイコンの&#8221;Git Flow&#8221;をクリックし、現れたウィンドウで「新規ホットフィックスを開始」をクリックします。<br/>
-下のようなダイアログが現れるので、今回のホットフィックスでリリースするバージョンを入力して「OK」をクリックします。バージョンの付け方は各プロジェクトで個別に決まりがあると思いますが、ここではマイナーバージョンアップ&#8221;1.0.1&#8221;とします。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-hotfix-start-dialog.png" alt="git flow hotfix start dialog" /></p>
-
-<p>hotfix/1.0.1 というブランチが作成され、現在のブランチがこれに移ります。グラフは下のような状態になります。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-hotfix-start-graph.png" alt="git flow hotfix start graph" /></p>
-
-<p>ローカルの状態が前回リリース時の1.0の状態に戻るので、ここに緊急修正に必要なパッチだけを適用し、該当箇所の動作確認を至急おこなってリリースします。<br/>
-リリースは、ウィンドウ上部のツールアイコンの&#8221;Git Flow&#8221;をクリックし、現れたウィンドウで「現在のブランチを終了」をクリックします。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-hotfix-finish-dialog.png" alt="git flow hotfix finish dialog" /></p>
-
-<p>「OK」をクリックすると、リリース時と同様にhotfixブランチがmasterとdevelopにマージされmasterのHEADにタグ&#8221;1.0.1&#8221;が付加されます。また、マージが終了したhotfixブランチは削除されます。</p>
-
-<p><img src="http://haiiro-shimeji.github.com/images/2015-09-02-git-flow-hotfix-finish-graph.png" alt="git flow hotfix finish graph" /></p>
-
-<h1>まとめ</h1>
-
-<p>以上が、git-flowを使って&#8221;A successful Git branching model&#8221;の運用を行う手順です。</p>
-
-<p>git-flowを使って、機能開発、検証(テスト)工程、緊急修正を行う手順を説明しました。これらの修正は開発のフェーズとして全く異なる局面で適用されるものなので、プロダクトの信頼度を調整する上で正しく区別される必要があります。</p>
-
-<p>また、git-flowが内部的にどのような処理を行っているかについても言及しました。大したことはやっていないので、&#8221;A successful Git branching model&#8221;を理解していればgit-flowの補助が無くても運用をするのは十分可能です。しかし、決まりきった処理を自力で複数のコマンドで行うというのも面倒なので、コマンドショートカットとしても有用であると考えられます。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[CSS3のクロスブラウザサポートを支援するAutoprefixer]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2015/08/12/autoprefixer/"/>
-    <updated>2015-08-12T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2015/08/12/autoprefixer</id>
-    <content type="html"><![CDATA[<p>AutoprefixerはCSS3のベンダ互換プレフィックスの管理をしてくれるツールです。<br/>
-ベンダープレフィックスというのは、CSS3が勧告される前に各ブラウザが独自に該当機能を
-実装していた時代に、記述の衝突を避けるためにプロパティ名に付加されて使用されていたプレフィックスです。</p>
-
-<p>たとえば、border-imageは、昔はFirefoxでは</p>
-
-<p>&#8220;`CSS</p>
-
-<pre><code>-moz-border-image: url("bg_dot.png") 15 round;
+<pre><code>$ cordova create hoge
 </code></pre>
 
-<p>&#8220;`</p>
+<h3>プラグインディレクトリ作成</h3>
 
-<p>Chrome, Safariでは</p>
-
-<p>&#8220;`CSS</p>
-
-<pre><code>-webkit-border-image: url("bg_dot.png") 15 round;
+<pre><code>$ cd hoge
+$ mkdir plugins/com.example.plugin
 </code></pre>
 
-<p>&#8220;`</p>
+<h3>ネイティブコードを配置</h3>
 
-<p>でした。結構昔の話なので、いつまでこうだったのかは覚えてないです。</p>
+<p>1秒おきに現在時刻をデバッグ出力するスレッドを立ち上げるだけのService実装です。
+plugins/com.example.plugin/src/android/com/example/plugin/Service.java に配置します。</p>
 
-<p>ベンダプレフィックスは、各プロパティがCSS3勧告として正式採用されれば必要なくなるはずですが、<br/>
-CSS3勧告は段階的に行われているので、今後もベンダープレフィックスが必要なプロパティが発生する
-可能性はあります。(実際にはなさそうらしいですが…)<br/>
-あと、ユーザーが古いバージョンのブラウザを使っている場合には未だにベンダープレフィックス付きの
-CSSを作成する必要があります。</p>
+<pre><code>package com.example.plugin;
 
-<p>各ブラウザ、各バージョンでのCSSプロパティの対応状況(ベンダープレフィックスの必要有無も含む)は、
-http://caniuse.com/ でまとめられているので、妖しげなプロパティを使う場合には確認するといいと思います。</p>
+import java.util.Date;
 
-<h2>Autoprefixer</h2>
+import android.content.Intent;
+import android.os.ConditionVariable;
+import android.os.IBinder;
 
-<p>さて、そんなベンダープレフィックスですが、各プロパティについてサポート対象とするブラウザが対応しているのかどうか、
-を記憶しておくほど暇ではないですし、いちいち http://caniuse.com/ まで確認しにいくというのは面倒です。</p>
+public class Service extends android.app.Service {
 
-<p>ここで登場するのが、Autoprefixerです。</p>
+    boolean running = false;
+    ConditionVariable condition;
 
-<p>Autoprefixerは、CSSファイルを読み込み、記述内容をcaniuseの情報と照らしあわせて、必要あれば
-ベンダープレフィックスを付けてCSSを出力してくれるという便利ツールです。<br/>
-公式のgithubのREADMEによると、caniuseの最新の情報を参照して変換処理を行う、と書いてあります。<br/>
-コマンドを実行するたびに最新情報を取得しに行くのか、ツールのアップデートのタイミングで情報更新を
-行うのかは調べていません。</p>
+    static final long WAIT_TIME = 1 * 1000;
+    private final Runnable task = new Runnable() {
+        public void run() {
+            while(running) {
+                android.util.Log.e(Service.class.getCanonicalName(), new Date().toString());
+                condition.block(WAIT_TIME);
+            }
+        }
+    };
 
-<p>インストールには npm が必要です。</p>
+    @Override
+    public void onCreate() {
+        running = true;
+        Thread thread = new Thread( null, task, this.getClass().toString() );
+        condition = new ConditionVariable( false );
+        thread.start();
+        android.util.Log.e(getClass().getCanonicalName(), "service start");
+    }
 
-<pre><code># npm install --global postcss-cli autoprefixer
-</code></pre>
+    @Override
+    public void onDestroy() {
+        running = false;
+    }
 
-<p>そして、こんなCSSを書いてみます。</p>
+    @Override
+    public IBinder onBind( Intent intent ) {
+        throw new UnsupportedOperationException( "Not supported yet." );
+    }
 
-<p>&#8220;`CSS</p>
-
-<pre><code>a {
-    display: flex;
 }
 </code></pre>
 
-<p>&#8220;`</p>
+<p>つづいて、JavaScriptからServiceを立ち上げるためのインターフェイスを用意します。
+plugins/com.example.plugin/src/android/com/example/plugin/Plugin.java に配置します。</p>
 
-<p>aptoprefixerで変換してみます。</p>
+<pre><code>package com.example.plugin;
 
-<pre><code>$ postcss --use autoprefixer main.css -o main.dist.css
-</code></pre>
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
+import org.json.JSONArray;
+import org.json.JSONException;
 
-<p>すると、こんなCSSが吐き出されます。</p>
+import android.app.Activity;
+import android.content.Intent;
 
-<p>&#8220;`CSS</p>
-
-<pre><code>a {
-    display: -webkit-box;
-    display: -webkit-flex;
-    display: -ms-flexbox;
-    display: flex;
+public class Plugin extends CordovaPlugin {
+    @Override
+    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        if (action.equals("startService")) {
+            Activity activity = cordova.getActivity();
+            activity.startService(new Intent(
+                activity.getApplicationContext(),
+                Service.class
+            ));
+            callbackContext.success();
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
 </code></pre>
 
-<p>&#8220;`</p>
+<p>plugins/com.example.plugin/plugin.xmlを以下の内容で作成します。</p>
 
-<p>MozillaやWebkitのプレフィクスが自動で付加されました。</p>
-
-<p>また、元のCSSに現在では不要なベンダープレフィックスが記述されている場合にそれを除去してくれる機能もあります。</p>
-
-<p>&#8220;`CSS</p>
-
-<pre><code>a {
-    -webkit-border-radius: 5px;
-        border-radius: 5px;
-}
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    id="com.example.plugin" version="0.0.1"&gt;
+    &lt;name&gt;Plugin&lt;/name&gt;
+    &lt;description&gt;plugin example&lt;/description&gt;
+    &lt;license&gt;MIT&lt;/license&gt;
+    &lt;keywords&gt;&lt;/keywords&gt;
+    &lt;platform name="android"&gt;
+        &lt;config-file target="res/xml/config.xml" parent="/*"&gt;
+            &lt;feature name="PluginExample" &gt;
+                &lt;param name="android-package" value="com.example.plugin.Plugin"/&gt;
+                &lt;param name="onload" value="true" /&gt;
+            &lt;/feature&gt;
+        &lt;/config-file&gt;
+        &lt;config-file target="AndroidManifest.xml" parent="/manifest/application"&gt;
+            &lt;service android:name="com.example.plugin.Service" /&gt;
+        &lt;/config-file&gt;
+        &lt;source-file src="src/android/com/example/plugin/Plugin.java" target-dir="src/com/example/plugin" /&gt;
+        &lt;source-file src="src/android/com/example/plugin/Service.java" target-dir="src/com/example/plugin" /&gt;
+    &lt;/platform&gt;
+&lt;/plugin&gt;
 </code></pre>
 
-<p>&#8220;`</p>
+<p>&lt;plugin&gt;要素のid属性には、プラグインディレクトリの名称と同じ文字列を指定してください。<br>
+&lt;platform&gt;要素にはpluginがインストール可能な各プラットフォームが必要な情報を記述する必要があります。この例ではandroidへの情報のみを記載しています。<br>
+&lt;config-file&gt;要素ではplatform/android以下のxmlファイルを改変するための情報を記述することが出来ます。<br>
+target属性で目的のファイルを指定し、parent属性で内容を書き込む対象となる要素を指定しています。&#8221;/*&#8221;というのは、任意のトップレベル要素に指定内容を書き込むという意味です。<br>
+上記の方法で指定されたXMLファイルの対象要素内に、&lt;config-file&gt;要素の子要素がそのまま書き込まれることになります。</p>
 
-<p>という入力を与えると、実際には現在のWebkitエンジンではborder-radiusのベンダープレフィックスは不要なので、</p>
+<p>上記例ではconfig.xmlにプラグインインターフェイスの登録設定と、AndroidManifest.xmlへのサービス登録設定が書き込まれています。<br>
+この方法で、Permissionの追加やReceiverの登録なども同様に行うことが出来ます。</p>
 
-<p>&#8220;`CSS</p>
+<p>また、&lt;source-file&gt;要素ではプラグインのディレクトリからplatform/androidのディレクトリへファイルをコピーするための情報を記述することが出来ます。</p>
 
-<pre><code>a {
-    border-radius: 5px;
-}
-</code></pre>
+<p>今回の例ではJavaソースコードのみをコピーしていますが、コピー対象のディレクトリにはsrc/以外を指定することも可能なので、同様にres/やlib/などに配置したいファイルを記述することで、ビルドに組み込むことが可能です。</p>
 
-<p>&#8220;`</p>
+<p>以上でプラグイン側の実装は終了です。さいごにWebアプリケーションからプラグインのインターフェイスを利用するコードを追加します。</p>
 
-<p>となります。</p>
+<p>www/js/index.jsのdevicereadyイベントのコールバック部分に以下のコードを追加します。<br>
+devicereadyイベント取得後に実行しないと、cordovaオブジェクトが未初期化状態でエラーになります。</p>
 
-<p>実際には、複数のCSSを一括変換する必要があると思います。そのためには下記のようにします。</p>
-
-<pre><code>$ postcss --use autoprefixer src/css/*.css -d dest/css
-</code></pre>
-
-<h3>サポートブラウザの指定</h3>
-
-<p>上記の例では、デフォルトのサポートブラウザ指定を使いました。<br/>
-実際にはプロジェクトごとにサポートするブラウザが決まっていると思います。<br/>
-ブラウザバージョンの明示指定は以下のようにします。</p>
-
-<pre><code>$ postcss --use autoprefixer \
---autoprefixer.browsers 'last 2 firefox versions, last 2 chrome versions, ie 10, ie 11' \
-main.css -o main.dist.css
-</code></pre>
-
-<p>この指定では、Firefoxの最新の2バージョン、Chromeの最新の2バージョン、IE 10, 11をサポートするために
-ベンダープレフィックスを付加するように指示しています。<br/>
-上記の flex のプロパティが使われているCSSを入力すると、出力されるCSSは以下のようになります。</p>
-
-<p>&#8220;`CSS</p>
-
-<pre><code>a {
-    display: -ms-flexbox;
-    display: flex;
-}
-</code></pre>
-
-<p>&#8220;`</p>
-
-<p>caniuseの記述によると、上記指定のブラウザの中でベンダープレフィックスが必要なのは、IE10のみです。<br/>
-http://caniuse.com/#feat=flexbox<br/>
-ブラウザの指定が出力結果に反映されていることがわかります。</p>
-
-<h3>サポートブラウザの自動指定</h3>
-
-<p>と、ここまでだと、ふーんAutoprefixerやるじゃんすごいじゃん、という感じなのですが、さらにAutoprefixerには
-サポートブラウザの自動選択の機能があるので、紹介しておきます。</p>
-
-<p>autoprefixerコマンドに -i オプションを付加して実行すると、任意のブラウザ指定でどのブラウザがサポートされるのかと、
-その指定の場合に必要とされるベンダープレフィックスの一覧が表示されます。</p>
-
-<p>&#8220;&#8220;</p>
-
-<pre><code>$ autoprefixer -i -b 'last 2 firefox version, last 2 chrome versions, ie 10, ie 11'
-Autoprefixer CLI is deprecated. Use postcss-cli instead.
-Browsers:
-  Chrome: 44, 43
-  Firefox: 39, 38
-  IE: 11, 10
-
-...
-この下には、これらのブラウザで必要なベンダープレフィックスの一覧が表示されます
-</code></pre>
-
-<p>&#8220;&#8220;</p>
-
-<p>最初の例では、明示的なブラウザ指定を行わずデフォルトの設定を使いました。<br/>
-この時にサポートに入ったブラウザは何だったのでしょうか。 -b オプションなしで実行してみます。</p>
-
-<p>&#8220;&#8220;</p>
-
-<pre><code>$ autoprefixer -i
-Autoprefixer CLI is deprecated. Use postcss-cli instead.
-Browsers:
-  Chrome for Android: 42
-  UC for Android: 9.9
-  Android: 4.4, 4.4.3-4.4.4, 4.2-4.3
-  Chrome: 44, 43
-  Firefox: 39, 38, 31
-  IE: 11, 10, 9, 8
-  IE Mobile: 11, 10
-  iOS: 8.1-8.4, 8
-  Opera Mini: 5.0-8.0
-  Opera: 30, 29, 12.1
-  Safari: 8, 7.1
-</code></pre>
-
-<p>&#8220;&#8220;</p>
-
-<p>かなり多くのブラウザを対象としています。</p>
-
-<p>ブラウザの明示指定がない場合、デフォルトでどのブラウザをサポートするのかは、
-autoprefixerのサポートモジュールである browserlist のドキュメントに記載があります。</p>
-
-<p>https://github.com/ai/browserslist</p>
-
-<p>これによると、デフォルトのブラウザ指定は以下のようになっている、とあります。</p>
-
-<pre><code>&gt; 1%, last 2 versions, Firefox ESR, Opera 12.1
-</code></pre>
-
-<p>カンマ区切りで複数の条件が指定されています。</p>
-
-<p>|> 1%|主要ブラウザのうち、ユーザーシェアが1%以上のブラウザとそのバージョンを指定します|
-|last 2 versions|主要ブラウザのうち、最新の2バージョンを指定します|
-|Firefox ESR|Firefoxの法人向けサポート版です|
-|Opera 12.1|Opera Presto版の最新バージョンです|</p>
-
-<p>「主要ブラウザ」というのは、 Chrome, Firefox, IE, IE Mobile, iOS Safari, Opera, Safari を指します。<br/>
-面白いのは、最初のシェア割合の指定で、古いブラウザでも何らかの事情で利用が停止されていないものは
-自動的にサポート対象に含められることになります。<br/>
-Androidの旧ブラウザなんかは、ベンダの改造OSがアップデート出来ない影響で使い続けている人が
-少数だがまだいる、ということのようです。<br/>
-IE8はシェア2%指定にすると消えますが、まだ少し使ってる人がいるということのようですね。XPでしょうか。</p>
-
-<p>国別シェアの指定を行うことも出来ます。アメリカで2％以上のシェアがあるブラウザを指定するには、以下のようにします。</p>
-
-<pre><code>$ autoprefixer -i -b "&gt; 2% in US"
-Autoprefixer CLI is deprecated. Use postcss-cli instead.
-Browsers:
-  Chrome for Android: 0
-  Chrome: 44, 43
-  Firefox: 39, 38
-  IE: 11
-  iOS: 8.1-8.4
-  Safari: 8
-</code></pre>
-
-<p>対して、日本で2％以上のシェアがあるブラウザを指定するには、以下のようにします。</p>
-
-<pre><code>$ autoprefixer -i -b "&gt; 2% in JP"
-Autoprefixer CLI is deprecated. Use postcss-cli instead.
-Browsers:
-  Chrome for Android: 0
-  Android: 4.4
-  Chrome: 44, 43
-  Firefox: 39
-  IE: 11, 9
-  iOS: 8.1-8.4
-</code></pre>
-
-<p>日本だとアメリカに比べてIE9のシェアが多いです。Vistaでしょうか。7をアップデートしないまま使ってるユーザーでしょうか。<br/>
-あと、Android4.4ブラウザは日本のベンダーカスタマイズAndroidのせいだと思います。<br/>
-まあブラウザシェア自体は調べればすぐにわかるのですが、CSSの調整に直接適用してしまおうというのが面白いと思います。</p>
-
-<p>というわけで、autoprefixerを使うことで、将来的なブラウザのアップデートや、シェアの変化に対応した
-最適なCSSを自動的に作成できる、ということになります。</p>
-
-<h3>Gruntからの利用</h3>
-
-<p>Autoprefixerの処理をGruntのビルド処理に含めることが出来ます。<br/>
-ここまでの例では色々試したかったのでコマンドラインで使いましたが、ビルドプロセスに含めて自動で処理するほうが
-一般的だと思います。</p>
-
-<p>Gruntfile.js に以下を記述</p>
-
-<p>&#8220;`Javascript</p>
-
-<pre><code>autoprefixer: {
-    options: {
-        browsers: ['last 2 version', 'ie 8', 'ie 9']
+<pre><code>cordova.exec(
+    function() {},
+    function() {
+        console.log('startService is failed.');
     },
-    file: {
-        expand: true,
-        flatten: true,
-        src: 'src/css/*.css',
-        dest: 'dest/css/'
-    },
-}
+    "PluginExample", "startService",
+    []
+);
 </code></pre>
 
-<p>&#8220;`</p>
+<h3>ビルドと実行</h3>
 
-<p>ぐぐるといっぱい出てくると思うので、詳細は割愛します。</p>
+<p>プラグインをplatform/androidに追加します。プラグインの配置は、プラットフォームディレクトリの新規作成時にのみ行われます。</p>
+
+<pre><code>$ cordova platform remove android &amp;&amp; cordova platform add android
+</code></pre>
+
+<p>cordova platform update android でプラグインのアップデートも行われるのではないかと期待したのですが、updateコマンドはAndroidSDKのバージョンアップが行われるだけのようで、プラグインの更新は行われませんでした。プラグインを編集した際は毎回プラットフォームディレクトリを作成し直すことになります。</p>
+
+<p>ビルド</p>
+
+<pre><code>$ cordova build android
+</code></pre>
+
+<p>あらかじめ実機端末の接続またはエミュレータの起動を行っておいて、インストール</p>
+
+<pre><code>$ adb install -r platforms/android/ant-build/HelloCordova-debug.apk
+</code></pre>
+
+<p>アプリケーションを起動しlogcatで端末ログを表示すると、実装したServiceによって毎秒ログが出力されているのが確認できると思います。</p>
+
+<h3>ネイティブコードのテスト</h3>
+
+<p>ざんねんながら、現在はプラグインのテストを構成するきまった方法は無いようです。ただ、pluginディレクトリの中身はかなり自由な構成が可能なので、僕はsrc/android以下にpom.xmlファイルをおいてMaven Androidプロジェクトを構成しています。<br>
+最終的にsource-fileタグの設定によりプラットフォームディレクトリ内で所定の構成になれば、プラグインディレクトリはどのような配置でもいいようです。</p>
 ]]></content>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[ビルドツールGrunt.jsをPHP開発で利用する]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2015/07/20/grunt-php/"/>
-    <updated>2015-07-20T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2015/07/20/grunt-php</id>
-    <content type="html"><![CDATA[<p>通常、Webアプリケーション開発で使われる軽量プログラミング言語ではコンパイルが不要であるため、
-Javaのmaven, Cのmakeに相当するようなビルドツールはこれまで利用されてきませんでした。<br/>
-しかし、近年のWebアプリケーション開発ではデプロイ時に開発リソースに対して以下のような前処理が
-行われることが増えてきたため、これらの作業の自動化、共有化の目的でビルドツールが利用されるように
-なってきています。</p>
+    <title type="html"><![CDATA[Yeomanで作ったIonic+AngularJS+PhoneGapなWebアプリのKarma+mocha+chaiなテストをJenkinsで実行するよ！]]></title>
+    <link href="http://haiiro-shimeji.github.com/blog/2014/04/01/ionic_etcetc/"/>
+    <updated>2014-04-01T00:00:00+09:00</updated>
+    <id>http://haiiro-shimeji.github.com/blog/2014/04/01/ionic_etcetc</id>
+    <content type="html"><![CDATA[<p>タイトルの通り、Yeomanで作ったIonic+AngularJSなWebアプリをPhoneGapでネイティブアプリにするプロジェクトを構築し、
+テストをmocha+chaiで記述してKarmaで実行できるようにし、Jenkinsで定期ジョブにする手順を記述するエントリです。</p>
 
-<ul>
-<li>外部ライブラリの依存関係解決とアプリケーションへの組み込み</li>
-<li>Javascript, CSSのminify</li>
-<li>Sass, CompassなどのCSS出力スクリプトのコンパイル</li>
-<li>リソースURLの難読化</li>
-</ul>
+<p>登場人物が多すぎて自分でも意味不明になってきたので、整理の意味でブログに書いときます。</p>
 
+<h3>用語</h3>
 
-<p>加えて、継続的インテグレーション(CI)のための次のような機能も提供されます。</p>
+<p>まずは上述の用語の乱雑なまとめ</p>
 
-<ul>
-<li>デバッグサーバーの起動</li>
-<li>ファイル保存時の構文チェックやコード規約チェック自動化</li>
-<li>ファイル保存時のテスト自動化</li>
-</ul>
+<h6>Yeoman</h6>
 
+<p>アプリケーションのひな形を作成してくれるツール</p>
 
-<p>このエントリでは、Webフロントエンド開発(Javascript開発)で広く利用されているビルドツールである
-GruntをPHPのバックエンド開発まで含めて利用する例を記載します。</p>
+<h6>grunt</h6>
 
-<h1>YeomanによるPHPアプリケーションプロジェクトサンプルの作成</h1>
+<p>ビルドツール</p>
 
-<p>Yeomanは、Gruntプロジェクトのテンプレートを作成するツールです。<br/>
-作業を始める前に、まずはYeomanとGruntのインストールを行います。npmが利用できる環境で、</p>
+<h6>bower</h6>
 
-<pre><code># npm install -g yo grunt-cli bower
+<p>javascriptライブラリの管理ツール</p>
+
+<h6>npm</h6>
+
+<p>node.jsライブラリの管理ツール</p>
+
+<p>まだ使い始めたばかりなのでアレですが、Yeoman+grunt+bower+npmでJavaのMavenみたいなことが出来るという
+理解でいいのかな。便利っぽいです。</p>
+
+<h6>Ionic</h6>
+
+<p>AngularJSに依存したモバイルWebアプリのUIライブラリ。
+Phonegapでの利用も想定して作られているようなので、使ってみました。
+AngularJSはただのWebアプリ用のフレームワークなので、モバイル端末に対応するためには
+何らかのUIライブラリが必要です。</p>
+
+<h6>AngularJS</h6>
+
+<p>有名なJavascript MVCフレームワークです</p>
+
+<h6>Karma</h6>
+
+<p>テストランナーです</p>
+
+<h6>mocha</h6>
+
+<p>テストフレームワークです</p>
+
+<h6>chai</h6>
+
+<p>アサーションライブラリです</p>
+
+<p>Javascriptだとテスト関係のライブラリが機能別に細かく分かれているのでややこしいですね。</p>
+
+<h6>PhoneGap</h6>
+
+<p>WebアプリをWebView上でで動くネイティブアプリにするライブラリ。
+ハードウェア機能もJavascriptで使えるインターフェイスが用意されていてクロスプラットフォームなアプリを作れる</p>
+
+<h3>開発環境の構築</h3>
+
+<p>概念はややこしいですが、手順がワークフロー化されているので、やることは簡単です。</p>
+
+<p>まずは一連の操作で利用するライブラリをインストールしましょう。rubyとかgemとかnpmとかはすでに入っているかんじで、</p>
+
+<pre><code># gem install compass
+# npm install -g bower grunt-cli yo yeoman-generator generator-ionicjs karma-junit-reporter
+# npm install -g phonegap cordova
 </code></pre>
 
-<p>としてください。</p>
+<p>続いて、実際のプロジェクトを作成していきます。</p>
 
-<p>また、phpプロジェクトテンプレートのインストールを行います。これは一般に公開されているものがあるのですが、
-メンテナンスが停止していて微妙な感じだったので、社内リポジトリに修正拡張したものを配置しました。
-こちらをインストールしてみてください。</p>
+<pre><code>$ mkdir ionicSample
+$ cd ionicSample
+$ yo ionicjs
 
-<pre><code># npm install -g http://192.168.142.11:8080/ikeda_shoichi/generator-php
+    _             _
+   (_)           (_)
+    _  ___  _ __  _  ___
+   | |/ _ \| '_ \| |/ __|
+   | | (_) | | | | | (__
+   |_|\___/|_| |_|_|\___|
+
+[?] Would you like to use Sass with Compass (requires Ruby)? (y/N) y
+Created a new Cordova project with name "IonicSample" and id "com.example.IonicSample"
+[?] Which Cordova plugins would you like to include? (Press &lt;space&gt; to select)
+‣⬢ org.apache.cordova.console
+ ⬢ org.apache.cordova.device
+ ⬡ org.apache.cordova.network-information
+ ⬡ org.apache.cordova.splashscreen
+ ⬡ org.apache.cordova.battery-status
+ ⬡ org.apache.cordova.statusbar
+ ⬡ org.apache.cordova.device-motion
+[?] Which Cordova plugins would you like to include? org.apache.cordova.console, org.apache.cordova.device
+[?] Which starter app template which you like to use? 
+  Blank 
+  Tabs 
+  Side Menu 
+‣ Pets Seed 
 </code></pre>
 
-<p>上記ツール類がインストールできたら、プロジェクトを作成します。</p>
+<p>まず、Compassを使うかどうか、つづいてインポートするphonegapライブラリの選択を行います。
+最後にひな形の種類を聞かれます。実際に開発する場合は余計なものが無い方がいいかもしれませんが、
+ここではあるていどコンテンツが用意されているPet Seedを選択します。</p>
 
-<pre><code>$ mkdir php-sample
-$ cd php-sample
-$ yo php
+<p>パッケージビルドするプラットフォームを追加します。ここではandroidを扱います。
+あ、AndroidSDKはすでに適当に入ってる感じでおねがいします。</p>
 
-     _-----_
-    |       |
-    |--(o)--|   .--------------------------.
-   `---------´  |    Welcome to Yeoman,    |
-    ( _´U`_ )   |   ladies and gentlemen!  |
-    /___A___\   '__________________________'
-     |  ~  |
-   __'.___.'__
- ´   `  |° ´ Y `
-
-I'll be scaffolding out a php website for you.
-Out of the box you're going to get:
-- HTML5 Boilerplate
-- jQuery (v1.11)
-- Modernizr (v2.8.3)
-[?] What's the production URL for this site? hoge.example.com
-[?] and the dev URL? 127.0.0.1
-[?] What port should I use for the dev URL? 50080
-[?] Use PHP's built-in web server for dev testing? Yes
-[?] Which CSS preprocessor shall I use (none, sass, compass)? compass
-[?] Which version of Twitter Bootstrap shall I include (none, 2.3.2, 3.3.5, etc)? 3.3.5
-[?] Include Foundation Framework (v3)? No
-[?] Which files should be versioned to force cache expiration (none, all, css, js, img)? all
-[?] What name should I give the application directory where your development files are placed? app
-[?] What name should I give the distribution directory where compiled output files are placed? dist
+<pre><code>$ cordova platform add android
 </code></pre>
 
-<p>yoコマンドを実行すると、怪しげな紳士のAAの表示とともに、プロジェクト作成に必要ないくつかの質問をされます。</p>
-
-<p>What&#8217;s the production URL for this site?
-: 作成されるWebサイトのURLです。</p>
-
-<p>and the dev URL?
-: デバッグサーバー立ち上げの際のURLを聞かれます。<br/>
-ローカルホストで立ち上げる場合はループバックアドレスを入力すればよいですが、開発サーバーなどで立ち上げる場合は
-そのプライベートアドレスとかにするべきです。</p>
-
-<p>What port should I use for the dev URL?
-: デバッグサーバーのポートを指定します。他のプログラムで使用されていないポートを指定する必要があります。</p>
-
-<p>Use PHP&#8217;s built-in web server for dev testing?
-: デバッグサーバーにPHPビルドインサーバーを利用するかどうかを指定します。デフォルトでは利用しないということになっていますが、
-Yesを選択します。</p>
-
-<p>Which CSS preprocessor shall I use (none, sass, compass)?
-: CSS preprocessor scriptを選択します。sassはyeomanテンプレートのバグでなんだか使えないので、compassを選択します。
-ちなみにCSS preprocessor を使っていても、通常のCSSと同じように記述していればそのままCSSとして出力されます。</p>
-
-<p>Which version of Twitter Bootstrap shall I include (none, 2.3.2, 3.3.5, etc)?
-: Twitter Bootstrapを利用するかどうかと、バージョンを指定します。プロジェクトごとに任意に選択してください。</p>
-
-<p>Include Foundation Framework (v3)?
-: Foudation Frameworkを利用するかどうかを指定します。私も使ったことがないのでNoを指定しています。</p>
-
-<p>Which files should be versioned to force cache expiration (none, all, css, js, img)?
-: ブラウザのキャッシュ機能で古いリソースがユーザーに利用され続けたりすることを防いだり、URLの法則性から
-画像リソースを予測してアクセスされるのを防ぐために、リソースURLの難読化を行うかどうかを指定します。
-allを選択します。</p>
-
-<p>What name should I give the application directory where your development files are placed?
-: アプリケーションプログラムの配置ディレクトリを指定します。特に問題がなければデフォルトのappを指定します。</p>
-
-<p>What name should I give the distribution directory where compiled output files are placed?
-: ビルド済みプログラムの配置ディレクトリを指定します。特に問題がなければデフォルトのdistを指定します。</p>
-
-<p>これらを入力すると、npmで必要な依存ライブラリなどのダウンロードがはじまり、
-しばらく待っているとプロジェクトテンプレートが作成されます。</p>
-
-<h1>Gruntプロジェクトの利用方法</h1>
-
-<h2>ビルド</h2>
-
-<pre><code>$ grunt
-</code></pre>
-
-<p>とりあえず、おもむろにgruntコマンドを実行すればビルドが開始されます。<br/>
-しかし、ビルドの過程で行われるJavascriptのユニットテストがひとつもテストが無い状態だと失敗扱いになるので、
-とりあえずビルドを完遂するために、ここは</p>
-
-<pre><code>$ grunt --force
-</code></pre>
-
-<p>としてください。あるいは、テストプロセスをスキップしてビルドだけを行うには</p>
+<p>ビルドします。</p>
 
 <pre><code>$ grunt build
 </code></pre>
 
-<p>とします。<br/>
-テストの作成、配置の方法は後述します。</p>
+<p>これでもう、./platforms/android/ant-build に動作可能なパッケージができました。マジお手軽。</p>
 
-<p>このプロジェクトにおいてビルドの過程で行う処理は、以下のものになります。</p>
+<p>それでは、実行してみましょう。テスト用の端末をUSB接続するか、エミュレータを立ちあげておいて、</p>
 
-<ul>
-<li>Javascript Syntax check</li>
-<li>PHP Syntax check</li>
-<li>PHP ライブラリ依存関係の解決(composer)</li>
-<li>Javascript ユニットテスト実行</li>
-<li>PHP ユニットテスト実行</li>
-<li>compassのコンパイル</li>
-<li>html圧縮</li>
-<li>CSS3ベンダー互換記述の整理(autoprefix)</li>
-<li>CSS圧縮</li>
-<li>Javasctript圧縮</li>
-<li>リソースURLの難読化、参照箇所のURL置換</li>
-</ul>
-
-
-<h2>デバッグサーバーの立ち上げ</h2>
-
-<pre><code>$ grunt server
+<pre><code>$ cordova run android
 </code></pre>
 
-<p>上記コマンドで、php ビルドインサーバーが起動しデバッグサーバーが立ち上がります。<br/>
-デバッグサーバーのポートはプロジェクト作成時に指定したものが使われるので、
-サーバー立ち上げ前にこのポートが未使用であることを確認してください。</p>
+<p>実行出来ましたか？実行出来ましたね。</p>
 
-<p>デバッグサーバーは、ローカルのファイルを監視し、変更があった時自動でページの
-再読み込みを行ったり、compassのコンパイル、javascriptのシンタックスチェック、
-ユニットテストの実行などを行います。</p>
+<h3>テスト</h3>
 
-<h2>ユニットテスト</h2>
+<p>単体テストを実行します。テストはすでに ./test/spec/ 以下にサンプルがありますので、これを実行します。
+karmaといえば、ファイルの変更を検知して実行してくれる監視機能が特長のようですが、
+ここでは、最終的にはJenkinsのジョブとして扱いたいので、コマンドライン実行します。</p>
 
-<p>ユニットテストを実行するには、以下のコマンドを実行します。</p>
+<p>とはいえ、すでにすべての準備は整っていて、</p>
 
-<pre><code>$ grunt test:continuous
+<pre><code>$ grunt karma:continuous
+
+Running "karma:continuous" (karma) task
+WARN [karma]: Port 8080 in use
+INFO [karma]: Karma v0.12.2 server started at http://localhost:8081/
+INFO [launcher]: Starting browser PhantomJS
+WARN [watcher]: Pattern "/path/to/ionicSample/test/mock/**/*.js" does not match any file.
+INFO [PhantomJS 1.9.7 (Linux)]: Connected on socket jd_w9g872hnwnSfMdscZ with id 60562257
+.
+PhantomJS 1.9.7 (Linux): Executed 1 of 1 SUCCESS (0.039 secs / 0.001 secs)
+
+=============================== Coverage summary ===============================
+Statements   : 81.82% ( 9/11 )
+Branches     : 100% ( 0/0 )
+Functions    : 66.67% ( 4/6 )
+Lines        : 81.82% ( 9/11 )
+================================================================================
+
+Done, without errors.
+
+
+Execution Time (2014-04-01 08:45:17 UTC)
+karma:continuous  1.6s  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇ 100%
+Total 1.6s
 </code></pre>
 
-<p>テストはJavascriptとPHPについて配置されているテストをすべて実行します。</p>
+<p>できました。いたれり尽くせりすぎて怖い。</p>
 
-<h3>Javascript</h3>
+<p>ちなみに、karmaの監視を開始する場合は grunt test とやってください。</p>
 
-<p>Javascriptのテストフレームワークにはkarmaを使っています。<br/>
-test/js/spec/ 以下にテストファイルを配置してください。</p>
+<p>テストのコマンドライン実行はできましたが、jenkinsにジョブ登録してテストの定期実行結果を評価するには
+テスト結果をファイル出力する必要があります。</p>
 
-<p>&#8220;`javascript</p>
+<p>JUnit形式Reporterの追加</p>
 
-<pre><code>'use strict';
-
-describe('test for someMethod', function() {
-    it('someMethod returns true', function() {
-        expect(someMethod()).toBe(true);
-    });
-});
+<pre><code>$ npm install karma-junit-reporter --save-dev
 </code></pre>
 
-<p>&#8220;`</p>
+<p>Gruntfile の、karma.options.reporters を修正します</p>
 
-<h3>PHP</h3>
+<pre><code>$ vi Gruntfile.js
+reporters: ['junit', 'dots', 'coverage'],   #&lt;- 'junit'を追加
+</code></pre>
 
-<p>PHPのテストフレームワークはphpunitを使っています。<br/>
-test/php/classes/ 以下にテストファイルを配置してください。</p>
+<p>再度テスト実行</p>
 
-<p>&#8220;`PHP</p>
+<pre><code>$ grunt karma:continuous
+</code></pre>
 
-<pre><code>&lt;?php
-class StackTest extends PHPUnit_Framework_TestCase
-{
-    public function testPushAndPop()
-    {
-        $stack = array();
-        $this-&gt;assertEquals(0, count($stack));
+<p>JUnit形式の結果ファイル test-results.xml ができていると思います。</p>
 
-        array_push($stack, 'foo');
-        $this-&gt;assertEquals('foo', $stack[count($stack)-1]);
-        $this-&gt;assertEquals(1, count($stack));
+<p>Jenkinsには、このテスト実行コマンドと結果ファイルを登録しておけば継続的インテグレーションができるようになります。</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Geoserver extensionをScalaで作成する]]></title>
+    <link href="http://haiiro-shimeji.github.com/blog/2013/06/25/geoserver_scala/"/>
+    <updated>2013-06-25T00:00:00+09:00</updated>
+    <id>http://haiiro-shimeji.github.com/blog/2013/06/25/geoserver_scala</id>
+    <content type="html"><![CDATA[<p>地理情報をオープンデータ形式で配信するサーバー<a href="http://geoserver.org/display/GEOS/Welcome">Geoserver</a>のプラグイン &#8220;extension&#8221; をScalaで作成し、インストールします。</p>
 
-        $this-&gt;assertEquals('foo', array_pop($stack));
-        $this-&gt;assertEquals(0, count($stack));
-    }
+<p>Geoserver extensionを作るのもScalaプログラムを書くのもほとんど初めてです。</p>
+
+<p>とりあえず、公式チュートリアルの一番簡単そうなextension
+<a href="http://docs.geoserver.org/latest/en/developer/programming-guide/ows-services/implementing.html">http://docs.geoserver.org/latest/en/developer/programming-guide/ows-services/implementing.html</a>
+を、Scalaで書きなおしてみようと思います。</p>
+
+<p>Geoserver extensionsのチュートリアルは大体mavenでビルドするように紹介されているので、流れに乗ってmavenプロジェクトを作成します。mavenでScalaプロジェクトを作成しなければなりません。</p>
+
+<p><a href="http://d.hatena.ne.jp/clash_m45/20120614/1339682235">http://d.hatena.ne.jp/clash_m45/20120614/1339682235</a></p>
+
+<p>とりあえず上記リンクの通りにやりました。</p>
+
+<pre><code>$ mvn archetype:generate
+</code></pre>
+
+<p>なにやらプロジェクトのひな形が大量にリストアップされますが、&#8221;scala&#8221;と打つとscalaプロジェクトのひな形だけがフィルタされます。org.scala-tools.architypes のやつを選択しました。</p>
+
+<p>その後いろいろプロジェクト情報を聞かれますが、</p>
+
+<pre><code>Choose org.scala-tools.archetypes:scala-archetype-simple version: 
+1: 1.0
+2: 1.1
+3: 1.2
+4: 1.3
+Choose a number: 4: 4
+Define value for property 'groupId': : org.geoserver
+Define value for property 'artifactId': : helloscala
+Define value for property 'version': 1.0-SNAPSHOT: 
+Define value for property 'package': org.geoserver: 
+Confirm properties configuration:
+groupId: org.geoserver
+artifactId: helloscala
+version: 1.0-SNAPSHOT
+package: org.geoserver
+</code></pre>
+
+<p>こんな感じで入力して作成実行しました。</p>
+
+<p>何かいい感じでプロジェクトが作成されたようなので、プロジェクトのディレクトリに移動しおもむろにビルドしてみます</p>
+
+<pre><code>$ mvn install
+</code></pre>
+
+<p>うまくビルドできれば問題なくプロジェクト作成されているのではないでしょうか。</p>
+
+<p>さて、このひな形を元にgeoserver extensionを作成します。やることは、公式チュートリアルのpom.xmlを適当に修正することと、javaプログラムをScalaに書き直してパッケージに含めることです。</p>
+
+<p>pom.xmlはチュートリアルの内容を追記すればいいです。</p>
+
+<pre><code>&lt;!-- set parent pom to community pom --&gt;
+&lt;parent&gt;
+    &lt;groupId&gt;org.geoserver&lt;/groupId&gt;
+    &lt;artifactId&gt;community&lt;/artifactId&gt;
+    &lt;version&gt;2.2.0&lt;/version&gt;
+&lt;/parent&gt;
+
+&lt;!-- これらの行はすでに書き込まれていると思います
+&lt;groupId&gt;org.geoserver&lt;/groupId&gt;
+&lt;artifactId&gt;hello&lt;/artifactId&gt;
+&lt;version&gt;1.0&lt;/version&gt;
+&lt;name&gt;Hello World Service Module&lt;/name&gt;
+--&gt;
+&lt;packaging&gt;jar&lt;/packaging&gt;
+
+&lt;!-- declare depenency on geoserver main --&gt;
+&lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.geoserver&lt;/groupId&gt;
+      &lt;artifactId&gt;main&lt;/artifactId&gt;
+      &lt;version&gt;2.2.0&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;
+
+&lt;repositories&gt;
+    &lt;repository&gt;
+       &lt;id&gt;opengeo&lt;/id&gt;
+       &lt;name&gt;opengeo&lt;/name&gt;
+       &lt;url&gt;http://repo.opengeo.org&lt;/url&gt;
+    &lt;/repository&gt;
+&lt;/repositories&gt;
+</code></pre>
+
+<p>src/main/scala/HelloWorld.scala を作成します。</p>
+
+<pre><code>import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+class HelloWorld {
+  def sayHello(request: HttpServletRequest, response: HttpServletResponse){
+    response.getOutputStream().write( "Hello World!!".getBytes() );
+  }
 }
 </code></pre>
 
-<p>&#8220;`</p>
+<p>また、チュートリアルにあるapplicationContext.xmlをsrc/main/resourses/に作成します。
+チュートリアルではsrc/main/javaに作成されていますが、これに倣ってsrc/main/scalaに
+配置してもパッケージに含まれないので注意してください。</p>
 
-<h1>まとめ</h1>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd"&gt;
 
-<p>Webのフロントエンド開発でよく用いられるビルドツールであるGruntを使って、
-バックエンド側のPHPプログラムのビルドや開発ツールも利用する手順を紹介しました。<br/>
-これにより、フロントエンド側とバックエンド側のビルド処理を統一的に扱うことが
-可能になり、ビルド処理の見通しをわかりやすく管理することができます。</p>
+&lt;beans&gt;
+    &lt;!-- Spring will reference the instance of the HelloWorld class
+           by the id name "helloService" --&gt;
+    &lt;bean id="helloService" class="HelloWorld"&gt;
+        &lt;/bean&gt;
 
-<p>Gruntをはじめとするビルドツールの多くは、プラグイン方式を採用しており、
-ビルド処理を管理するビルドツールと個々のビルド処理は独立した開発が行われています。</p>
+    &lt;!-- This creates a Service descriptor, which allows the org.geoserver.ows.Dispatcher
+           to locate it. --&gt;
+        &lt;bean id="helloService-1.0.0" class="org.geoserver.platform.Service"&gt;
+    &lt;!-- used to reference the service in the URL --&gt;
+        &lt;constructor-arg index="0" value="hello"/&gt;
 
-<p>開発者は自分が必要だと思う処理を選択または自分で作成して、ビルドに含めることができます。<br/>
-すべてのビルド処理を自分で選択するというのはなかなか大変なので、Yeomanという
-プロジェクトテンプレートツールを併用することで、一般的に必要と思われるビルド処理を簡単に
-構築することが出来ます。</p>
+        &lt;!-- our actual service POJO defined previously --&gt;
+        &lt;constructor-arg index="1" ref="helloService"/&gt;
+
+        &lt;!-- a version number for this service --&gt;
+        &lt;constructor-arg index="2" value="1.0.0"/&gt;
+
+        &lt;!-- a list of functions for this service --&gt;
+        &lt;constructor-arg index="3"&gt;
+            &lt;list&gt;
+                &lt;value&gt;sayHello&lt;/value&gt;
+            &lt;/list&gt;
+        &lt;/constructor-arg&gt;
+
+        &lt;/bean&gt;
+&lt;/beans&gt;
+</code></pre>
+
+<p>こうなっているはずです</p>
+
+<pre><code>helloscala/
+  + pom.xml
+  + src/
+    + main/
+      + scala/
+        + HelloWorld.scala
+      + resources/
+        + applicationContext.xml
+</code></pre>
+
+<p>ビルドします</p>
+
+<pre><code>$ mvn clean install
+</code></pre>
+
+<p>target/helloscala-1.0-SNAPSHOT.jar ができているでしょうか。
+これをgeoserverのWEB-INF/lib/ディレクトリにコピーします。
+また、Scalaで作成されたクラスファイルを実行するためにscala-library.jarが必要なので、
+これもどこかから拾ってきて同じディレクトリに配置してください。
+以上ができたら、geoserverを(再)起動します。</p>
+
+<p><code>ows?request=sayHello&amp;service=hello&amp;version=1.0.0</code></p>
+
+<p>にアクセスして &#8220;Hello World!!&#8221; と表示されれば成功です。</p>
+
+<p>こんな感じで他のチュートリアルもScalaで書いてみたりしています。<br/>
+<a href="https://github.com/haiiro-shimeji/geoserver-extension-scala">https://github.com/haiiro-shimeji/geoserver-extension-scala</a></p>
+
+<p>JavaからScalaプログラムの呼び出しが可能なことを利用して、Geoserver extensionをScalaで作成しました。
+これで記述性の高いScalaでgeoserver開発が出来るようになるはずです。Scalaは今から勉強します。</p>
 ]]></content>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[Cordovaからハードウェア機能を利用する]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2015/07/07/phonegap/"/>
-    <updated>2015-07-07T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2015/07/07/phonegap</id>
-    <content type="html"><![CDATA[<p>このエントリは、Developer summit 2015 のセッション
-&#8220;エンタープライズ要件に対応する高品質なCordovaアプリ開発のポイント&#8221;の
-レポートです。</p>
+    <title type="html"><![CDATA[PhoneGap+OpenLayersでAndroid用地図アプリを作成する]]></title>
+    <link href="http://haiiro-shimeji.github.com/blog/2013/01/10/phonegap_openlayers/"/>
+    <updated>2013-01-10T00:00:00+09:00</updated>
+    <id>http://haiiro-shimeji.github.com/blog/2013/01/10/phonegap_openlayers</id>
+    <content type="html"><![CDATA[<p>Androidで地図アプリを作成しようとする場合、真正面から取り組むとWMS取得、描画プログラムを自前で実装することになり非常にめんどくさいです。</p>
 
-<h2>Cordova</h2>
+<p>ですが、Javascriptで実績を残しているライブラリOpenLayersをPhonegap上で動作させれば、悲しいほど簡単に実現することができます。</p>
 
-<p>Cordovaとは、AndroidやiOSなどのスマートデバイス用のアプリケーションの
-クロスプラットフォーム開発を行うためのフレームワークです。開発はHTML5+Javascriptで行います。</p>
+<h4>前提条件</h4>
 
-<p>CordovaはもともとPhonegapという名称でニトビ・ソフトウェアによって開発されていましたが、
-現在はAdobeに買収され、そのプロダクトになっています。しかし、ソースコードはApacheに寄贈され、
-Cordovaという名称でオープンソース開発が進められています。</p>
+<p>AndroidSDKをインストールしておきましょう。<br/>
+最新のPhonegap(記事投稿時点で2.2.0)を利用するためにAPIバージョンは15以上をインストールしましょう。</p>
 
-<p>というわけで、最新のパッケージを利用したり情報を追いかけるにはCordovaの名称で検索したほうがよいです。</p>
+<h3>必要なライブラリを取得します</h3>
 
-<h3>Cordova開発のメリット/デメリット</h3>
+<p>http://phonegap.com/<br/>
+http://openlayers.org/<br/></p>
 
-<p>HTML5+Javascriptによるクロスプラットフォーム開発ということで、以下のようなメリットが得られます。</p>
+<h3>PhonegapのAndroid exampleをコピーします</h3>
 
-<ul>
-<li>複数プラットフォーム間でのソースコード共有</li>
-<li>OSバージョン間のAPI差異をフレームワークで吸収してくれる</li>
-<li>標準的なWeb技術で開発が可能で各プラットフォームに対する学習コストの軽減</li>
-</ul>
+<pre><code># phonegapパッケージを解答してできたディレクトリにいるとして、
+cp -pri lib/android/example/ ~/cordova-example 
+</code></pre>
 
+<h3>設定ファイルを書き変えます</h3>
 
-<p>他のフレームワークの基盤技術としても用いられており、実質的にスマートデバイスのHTML5開発ではデファクトスタンダードという扱いになっています。
-Cordovaを基盤としたフレームワークはSenchaやOnsenUI、monakaなどがあります。</p>
+<p>コピーしてできたディレクトリにある2つのファイルを書き変えます。</p>
 
-<p>しかし、反面やはりデメリットも存在し、とくにネイティブアプリとのデザインの差異については理解しておく必要があります。CSSによるスタイル再現ということになるので、どう頑張ってもネイティブ描画とのイメージの違いがあります。デザインの良し悪しはCSSによるスタイル次第ということになりますが、iOSユーザーなどはスタイリッシュなネイティブアプリの見た目に慣れているため、たとえばApple Storeでの評価上位を目指すというような目的で作成するアプリケーションには向かない可能性があります。</p>
+<p>local.properties を作成し、</p>
 
-<h3>Cordova開発における注意点</h3>
+<pre><code>sdk.dir=[AndroidSDK がインストールされているディレクトリの絶対パス]
+</code></pre>
 
-<p>開発手法としてはWebアプリケーションのものを使うということになるので、Webアプリケーションで一般的に行われるセキュリティ対策は行わなければなりません。ネイティブアプリケーション開発では通常行わないものなので、落とし穴になりがちです。</p>
+<p>と書き込みます。</p>
 
-<p>まず、クロスサイトスクリプティングへの対応が必要になります。ユーザー入力を使用する可能性のある文字列(というか通信で取得されたデータ全般について行うよう統一したほうがよいでしょう)は適切にエスケープしてHTMLに埋め込む必要があります。これについては、AngularJSやjQueryなどのクライアントサイドフレームワークを用いることで負担を回避することができます。</p>
+<p>project.properties を編集します。</p>
 
-<p>また、ネイティブコードではコードの暗号化が通常行われますが、アセット内のJavascriptについてはなされないので独自に難読化などの対応を行う必要があります。ただ、難読化といっても効果に限界があるので、ミッションクリティカルなコードやデータについてはアプリケーションパッケージに含めないという対処が必要になります。</p>
+<pre><code>target=android-15
+</code></pre>
 
-<p>あと、クロスプラットフォーム開発環境ということで、ハードウェア機能の利用についてはひと手間かかるため、そのような機能が必要になる場合は一考したほうがよいという話がありました。しかし、これについてはエントリ後半で追加調査と検討を行ったので参照してください。</p>
+<p>&#8220;15&#8221;はインストールされている別のAPIバージョンにしてもいいです。</p>
 
-<h2>Cordovaからハードウェア機能を利用する</h2>
+<h3>OpenLayersをパッケージに入れます</h3>
 
-<p>ということで、ここからは追加検証です。
-セッションではCordovaからのハードウェア機能の利用は無理に行わないほうがよいという話がありましたが、現在のCordovaではハードウェア機能についてはプラグインの形でモジュールがまとめられており、わりあい簡単に導入することが出来ます。</p>
+<p>OpenLayersを解凍したディレクトリに入っている OpenLayers.jsとthemesディレクトリを、assets/www/ ディレクトリ以下にコピーします。</p>
+
+<h3>assets/www/index.html を書き変えます</h3>
+
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+            &lt;title&gt;OpenLayers Map&lt;/title&gt;
+            &lt;meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /&gt;
+            &lt;meta name="format-detection" content="telephone=no" /&gt;
+            &lt;meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" /&gt;
+            &lt;link rel="stylesheet" href="OpenLayers/theme/default/style.css" type="text/css"&gt;
+    &lt;link rel="stylesheet" href="OpenLayers/theme/default/google.css" type="text/css"&gt;
+            &lt;script src="cordova-#########js"&gt;&lt;/script&gt;
+            &lt;script src="OpenLayers/OpenLayers.js"&gt;&lt;/script&gt;
+            &lt;script type="text/javascript"&gt;
+                document.addEventListener('deviceready', function() {
+                    var map = new OpenLayers.Map( {
+                        div: "map",
+                    } );
+                    map.addControl(new OpenLayers.Control.Zoom());
+                    map.addControl(new OpenLayers.Control.Navigation({'zoomWheelEnabled': true}));
+                    map.addControl(new OpenLayers.Control.KeyboardDefaults());
+                    map.addControl(new OpenLayers.Control.TouchNavigation());
+
+                    map.addLayer( new OpenLayers.Layer.OSM( "Simple OSM Map") );
+
+                    //  とりあえず東京を中心にする
+                    map.setCenter(
+                        new OpenLayers.LonLat( 13###764772, 3###681610 ).transform(
+                                new OpenLayers.Projection("EPSG:4326"),
+                                map.getProjectionObject() ), 
+                        12 
+                    );
+
+                 }, false);
+
+            &lt;/script&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        &lt;div id="map" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0"&gt;
+            &lt;div id="location" style="position: absolute; z-index: 65535;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+
+<h3>ビルド、インストールします</h3>
+
+<p>事前にインストール対象のデバイスをデバッグ接続しておくか、エミュレータをたちあげておきましょう</p>
+
+<pre><code>$ ant install debug
+</code></pre>
 ]]></content>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[AngularJSから他ライブラリの利用]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2015/06/06/angular-jqui/"/>
-    <updated>2015-06-06T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2015/06/06/angular-jqui</id>
-    <content type="html"><![CDATA[<p>このエントリは、Developer summit 2015 のセッション
-&#8220;AngularJSの今とこれから - フロントエンドエンジニア座談会（仮）&#8221;の
-レポートです。</p>
+    <title type="html"><![CDATA[jQuery Deferred の使い方がよくわからない]]></title>
+    <link href="http://haiiro-shimeji.github.com/blog/2012/12/12/deferred/"/>
+    <updated>2012-12-12T00:00:00+09:00</updated>
+    <id>http://haiiro-shimeji.github.com/blog/2012/12/12/deferred</id>
+    <content type="html"><![CDATA[<p>jQuery Deferred の使い方がよくわからないので、まったく今更なのですが調べた内容のメモ書きです。</p>
 
-<h2>AngularJSサンプルアプリケーションの構築</h2>
+<h4>処理を順次実行する (基本的な使い方)</h4>
 
-<p>AngularJSプロジェクトの初期構築にはyeomanの利用が便利です。
-まず、npmがインストールされているという前提で、yeoman および
-AngularJSプロジェクトテンプレートのインストールを行います。</p>
+<p>非同期でない普通の処理を順次実行します。この例ではDeferredオブジェクトのありがたみは全くありません。</p>
 
-<pre><code>$ npm install -g yo generator-angular grunt-cli bower
+<pre><code>$.Deferred()
+.done( function( arg ) {
+    console.log("1:" + arg)
+} )
+.done( function( arg ) {
+    console.log("2: " + arg)
+} )
+.resolve("hogehoge")
 </code></pre>
 
-<p>つぎに、yeomanでテンプレートからAngularJSプロジェクトを作成します。</p>
+<h4>コールバックの処理結果を次のコールバックに与える</h4>
 
-<pre><code>$ mkdir sampleApp; cd sampleApp
-$ yo angular
+<p>ただ単に処理を羅列しても面白くもなんともないので、前の処理結果を次の処理に渡して参照します。</p>
+
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function( arg ) {
+    console.log(arg)
+    return "fugafuga"
+} )
+.done( function( arg ) {
+    console.log("1st task returns " + arg)
+} )
 </code></pre>
 
-<p>作成されたプロジェクトでは、すでにいい感じのGruntfileが用意されており、
-デバッグサーバーの立ち上げが可能です。</p>
+<p>pipe()に与えたコールバックが返した値は、次のコールバックに渡されます。また、done()はthis返すのに対し、pipe()はthisとは別のPromiseオブジェクトを返します。promiseオブジェクトはresolve(), reject(), promise()などの実行状態を変化させるメソッドが定義されていません。</p>
 
-<pre><code>$ grunt serve
+<p>最初の例ではresolve()をコールバック登録後に読んでいるのに対し上の例では登録前に読んでいます(最後に呼ぶとPromiseオブジェクトに対する呼び出しになってしまうため)が、この順番はあまり関係がありません。resolve()の前に追加されたコールバックでも後に追加されたコールバックでも関係なく登録された順番に実行されていくようになっています。これはDeferredオブジェクトの内部でコールバックを管理している、$.Callbacksオブジェクトの実装によるものです。</p>
+
+<h4>あとから処理を追加する</h4>
+
+<p>一旦実行状態に入ったDeferred Objectにあとからコールバックを追加しても実行されるので、下のようにバックグラウンドのタスクキューみたいな使い方もできます。</p>
+
+<iframe style="width: 100%; height: 300px" src="http://jsfiddle.net/haiiro_shimeji/huQ44/embedded/" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+
+<h4>非同期処理をチェーンする</h4>
+
+<p>pipe()に与えたコールバックからpromiseオブジェクトを返すと、次のコールバックはその実行を待って実行されます。promiseオブジェクトのresolve()の引数に与えた値は、次のコールバックの引数になります。</p>
+
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function( arg ) {
+    return $.ajax( {
+       url: url
+    } )
+ } )
+.done( function( arg ) {
+    console.log(arg)
+} )
+.pipe( function() {
+    return $.Deferred( function(d) {
+        setTimeout( function() { 
+            d.resolve("fugafuga") 
+        }, 1000 )
+    } ).promise()
+} )
+.done( function( arg ) {
+    console.log(arg)    //fugafuga
+} )
 </code></pre>
 
-<p>これで localhost:9001 にアクセスすればプロジェクトのプレビューが閲覧できます。</p>
+<p>$.ajax()のjQueryの非同期処理メソッドはだいたい(?)promiseオブジェクトを返すので、pipe()に与えたコールバックの戻り値として返せばよいです。jQuery Deferredと関連のない非同期処理の場合は、3つめのコールバックのように、あとからresolve()またはreject()される予定のpromiseオブジェクトを返します。</p>
 
-<h2>AngularJSとReactive</h2>
+<h4>処理が途中で失敗したとき</h4>
 
-<p>従来のフロントエンドフレームワークと比べたAngularJSの特徴は、Reactiveのしくみです。
-たとえば、「ユーザーがテキストフィールドに入力した文字列を画面に反映する」という
-機能をjQueryで実装しようとした場合、以下のようになるかと思います。</p>
+<p>ここまでは全てのコールバックが成功する前提で適当に組んでいましたが、人生何もかもうまくいくはずはなく当然処理の失敗というのも考えられます。$.ajax()などの非同期メソッドでは、処理に失敗すると戻り値のpromiseオブジェクトのreject()が呼び出されます (下のコードでは例のために自分で作ったpromiseオブジェクトのreject()を読んでいます)。</p>
 
-<p>HTML</p>
-
-<pre><code>&lt;div&gt;
-    &lt;input id="input"&gt;
-    &lt;p id="result"&gt;&lt;/p&gt;
-&lt;/div&gt;
-</code></pre>
-
-<p>Javascript</p>
-
-<pre><code>$('#input').change(function() {
-  $('#result').text($(this).val());
-});
-</code></pre>
-
-<p>これに対し、AngularJSではつぎのように実装することができます。</p>
-
-<pre><code>&lt;div ng-init="a = 'hoge'"&gt;
-    &lt;input id="input" ng-model="a"&gt;
-    &lt;p id="result"&gt;{{a}}&lt;/p&gt;
-&lt;/div&gt;
-</code></pre>
-
-<p>このように、Reactiveのしくみを使うことで、このような処理で従来必要であった
-Javascriptを記述する必要が無くなります。
-この機能でやらなければならない処理は、「入力フィールドの変更を検知し」
-「入力内容を画面に反映する」ということですが、これをフレームワークの機能として
-提供し、ユーザーは変数である「入力値」の定義を行うだけで実現できるように
-したのが、Reactiveです。
-この入力値や変数の画面への反映という処理を従来通りに記述すると、
-フロントエンド側のプログラムのかなりの部分を占めることになります。
-これをフレームワークに負わせることにより、アプリケーションコードの縮小、
-メンテナンスコストの低減が期待できます。</p>
-
-<h2>AngularJSから別のライブラリの利用</h2>
-
-<p>で、ここからが本題ですが、デブサミのセッションで「jQuery UIなどの外部ライブラリを
-AngularJS、とりわけReactiveのしくみのなかで扱おうとするのは鬼門である」という
-コメントがありました。</p>
-
-<p>なので、本当に鬼門なのか実際にやってみます。</p>
-
-<p>ここでは、jQuery UIのDatepickerをAngularJSっぽく使えるようにするDirectiveを
-新規実装してみます。AngularJSっぽく使えるDirectiveとは、Template HTML中で
-つぎのように使えるよう実装することです。</p>
-
-<pre><code>&lt;div calendar value="date"&gt;&lt;/div&gt;
-&lt;p&gt;{{date}}&lt;/p&gt;
-</code></pre>
-
-<p>&#8220;calendar&#8221;属性がついたdiv要素がjQuery UIのDatepickerに置換して表示され、
-その中で変更された日付変数が下のp要素中に自動で表示されるようにします。</p>
-
-<p>calendar属性のついた要素がDatepickerに置換されるようにするには、つぎのように
-Directiveを実装します。</p>
-
-<pre><code>'use strict';
-
-angular.module('jquiSampleApp')
-.directive('calendar', function() {
-  return {
-    link: function($scope, $element) {
-      $element.find('input').datepicker();
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function() {
+    return $.Deferred( function(d) {
+        setTimeout( function() {
+            //何らかの理由で失敗してしまった場合、reject()を呼ぶ
+            d.reject("fugafuga") 
+        }, 1000 )
+    } ).promise()
+} )
+.fail( function( arg ) {
+    //reject()が呼び出されたDeferredオブジェクトは、fail()で登録されたコールバックが順次実行される
+} )
+.done( function( arg ) {
+    //done()で登録されたコールバックは実行されない
+} )
+.pipe( 
+    function() {
+        //pipe()の第一引数は成功時コールバック。この場合は呼ばれない
     },
-    template: '&lt;p&gt;Date: &lt;input type="text"&gt;&lt;/p&gt;',
-    scope: {
-      value: '='
+    function() {
+        //第二引数は失敗時コールバック。こちらが呼ばれる。
+        return "error message";
     }
-  };
-});
+)
+.fail( function( errorMessage ) {
+    alert( errorMessage )
+} )
+.always( function() {
+    //always()で登録したコールバックは成功失敗いずれの場合にも呼ばれる。
+} )
 </code></pre>
 
-<p>しかし、これではjQuery UIで変更された値をView側の変数に反映するコードが
-無いので、それを追加する必要があります。
-これには入力に変更があったときに $scope.value を変更すればよいのですが、</p>
+<p>処理が失敗した場合に行う処理はfail()メソッドをつかってコールバック登録します。また、pipe()も第二引数で失敗時コールバックを指定することができます。成功時コールバックと同様に、次の処理に値またはpromiseオブジェクトを引き渡すことができます。また、always()を使うと、同じコールバックをdone()とfail()で同時に登録してくれます。finally処理のように使うことができます。</p>
 
-<pre><code>$element.find('input')
-.change(function() {
-    var s = $(this).val().split('/');
-    var m = parseInt(s[0] - 1);
-    var d = parseInt(s[1]);
-    var y = parseInt(s[2]);
-    $scope.value = new Date(y, m, d);
-});
+<h4>処理が途中で失敗したがリカバリして成功ルートに戻る</h4>
+
+<p>上の例では、処理が途中で失敗した場合は成功ルートを踏み外しエラー処理をひたすら行なっていくしかないですが、実際には取得に失敗した値についてデフォルト値を使うなどでリカバリしてそのまま処理を継続したい場合があります。</p>
+
+<pre><code>$.Deferred()
+.resolve()
+.pipe( function() {
+    return $.ajax( {
+        url: "/resource"
+    } )
+} )
+.pipe(
+    function( data ) {
+        return _parse( data )
+    },
+    function() {
+        //取得に失敗した場合はデフォルト値を使い、正常処理をつづける
+        return $.Deferred().resolve( DEFAULT )
+    }
+)
+.done( function( arg ) {
+    //ajaxは失敗したが、pipeされたDeferredオブジェクトでresolve()が呼ばれたので成功ルートに戻った
+} )
+.pipe( 
+    function( data ) {
+        return $.ajax( {
+            url: data
+        } )
+    }
+)
 </code></pre>
 
-<p>と普通にやっても画面上に変更が反映されません。
-(正確には反映されないわけではなく、別のAngularJS上のイベントが発生したときに
-反映されます。)</p>
+<h4>処理をフォークする</h4>
 
-<p>View変数の変更を画面に反映する処理は、&#8221;digest loop&#8221;という処理の中で発生します。
-digest loopは、画面上のUIイベントが発生したタイミングで開始され、AngularJSが
-定義しているイベントハンドラ(ng-clickとか)の呼び出しを行い、その後View変数の
-変更をチェックして必要があれば画面への反映を行います。
-このため、通常通りclick属性などで定義したイベントハンドラはdigest loop
-の外で処理されることになるので、その中で行われたView変数の変更は画面表示には
-すぐに反映されず、つぎのdigest loopの実行時まで待たなければならない、ということになります。
-これは、jQuery UIに限らず独自のイベントハンドラをセットして使っているライブラリを
-AngularJS中で扱おうとしたときに常に注意が必要ということになります。</p>
+<p>$.when() は複数のPromiseオブジェクトを引数に取り、それら全ての実行終了を待ち合わせるPromiseオブジェクトを返します。下の例では、ふたつのajax通信が成功するとdoneのコールバックに処理が移ります。doneのコールバックには非同期処理の結果が、when()に渡したオブジェクトの順番で引数として与えられます。</p>
 
-<p>digest loopを任意に呼び出して画面への反映を行うには、以下のようにします。</p>
+<p>いずれかの取得が失敗した場合、ただちにfail()に与えられたコールバックに処理が移ります。このとき他の通信が成功していたとしても全ての結果が取得できない点がポイントです。</p>
 
-<pre><code>$element.find('input')
-.change(function() {
-    $scope.$apply(function() {
-        var s = $(this).val().split('/');
-        var m = parseInt(s[0] - 1);
-        var d = parseInt(s[1]);
-        var y = parseInt(s[2]);
-        $scope.value = new Date(y, m, d);
-    });
-});
+<pre><code>$.when( 
+    $.ajax( {
+        url: url1,
+        data: data1
+    } ),
+    $.ajax( {
+        url: url2,
+        data: data2
+    } )
+)
+.done( function( resultFromAjax1, resultFromAjax2 ) {
+        console.log("ajax1 returns " + resultFromAjax1[0])
+        console.log("ajax2 returns " + resultFromAjax2[0])
+} )
+.fail( function( xhr, status, error ) {
+        console.log("failed: " + status)
+} )
 </code></pre>
 
-<p>$scope.$apply() はその場でdigest loopを呼び出し、その中の処理として引数で与えられた関数を
-実行します。</p>
+<p>失敗しても他の結果は取得したい場合はこんな感じですかね。。</p>
 
-<p>注意しなければならないのは、この$scope.$apply()関数をdigest loop中で呼び出すとエラーが発生
-するという点です。確実にdigest loopの外で呼ばれるよう、イベントハンドラの中で直接呼ぶように
-したほうが無難です。</p>
-
-<p>さて、これで入力フィールドの変更内容が画面に反映され、完成と言いたいところですが、まだ一点
-問題が残っています。入力フィールド以外から変数が変更された際に入力フィールドに値が反映されない
-という点です。</p>
-
-<p>外部ライブラリを扱う際は、変数の変更を自分で検知して入力フィールドに反映させる処理を
-書く必要があります。</p>
-
-<pre><code>  $scope.$watch('value', function(value) {
-    var dateStr = (value.getMonth() + 1)
-          + '/' + value.getDate()
-          + '/' + value.getFullYear();
-    $element.find('input').val(dateStr);
-  }, true);
+<pre><code>$.when( 
+    $.ajax( {
+        url: url1,
+        data: data1
+    } )
+    .pipe(
+        function( result, status, xhr ) { 
+            return $.Deferred().resolve( result, status, xhr ) 
+        },
+        function( xhr, status, error ) {
+            return $.Deferred().resolve( DEFAULT, status, xhr )
+        }
+    ),
+    $.ajax( {
+        url: url2,
+        data: data2
+    } )
+    .pipe(
+    function( result, status, xhr ) { 
+            return $.Deferred().resolve( result, status, xhr ) 
+        },
+        function( xhr, status, error ) {
+            return $.Deferred().resolve( DEFAULT, status, xhr )
+        }
+    )
+)
+.done( function( resultFromAjax1, resultFromAjax2 ) {
+        console.log("ajax1 returns " + resultFromAjax1[0])
+        console.log("ajax2 returns " + resultFromAjax2[0])
+} )
+.fail( function( xhr, status, error ) {
+        console.log("failed: " + status)
+} )
 </code></pre>
 
-<p>$scope.$watch()はView変数を監視し、変更があった際に指定したコールバックを実行するよう設定する
-関数です。
-第3引数は、監視対象の変数オブジェクトのメンバーの変更を再帰的に監視するかどうかのフラグです。
-これをfalseまたは未指定にすると、setDate()メソッドなどによりDate型変数の内容が変更されただけでは
-コールバックが呼び出されず、再代入が行われた時にだけ実行される、ということになります。
-しかし巨大なオブジェクトを再帰的に監視するという場合は処理コストがかなりかかることが懸念されるので、
-できればプリミティブ型の変数をnon-recursiveで監視したほうが無難かと思います。</p>
+<p>重複コードができてしまうので、Promiseオブジェクト生成の部分は $.map() とかを使ってまとめるとよいです。</p>
 
-<p>以上が外部ライブラリをAngularJSで扱う場合の流れになります。実装は不可能ではありませんが、
-結構めんどくさく、しかも途中で $scope.$watch を使わざるをえないというところでパフォーマンス的な
-懸念もあります。</p>
+<h4>非同期処理をいっぱいチェーンする</h4>
 
-<p>DatepickerならばjQueryを使わずともangular-bootstrapなどですでにAngularJSベースで開発された
-コンポーネントが存在するので、そちらを使ったほうが無難です。
-jQueryUIコンポーネントのwrapをしたものも出回っていますが、先に述べたようにパフォーマンスの懸念が
-あるのと、入出力双方まで対応していないなど微妙な実装のものもあるので、できればあまり使わない
-ほうがいい、という印象です。</p>
+<p>$.when() は、ある配列について各要素に対し非同期処理を並列実行します。順次実行したい場合は以下のようにします。</p>
 
-<p>しかし、マイナーなライブラリをAngularJS上で扱いたい場合は独自にwrapperを作成しなければ
-ならない、ということもあります。その際には上記のようなところを注意すると良いと思います。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[気象庁防災情報XMLフォーマットの利活用]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2015/05/27/bousaixml/"/>
-    <updated>2015-05-27T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2015/05/27/bousaixml</id>
-    <content type="html"><![CDATA[<p>気象庁防災情報XMLフォーマットは、気象庁から配信する防災関連情報のあたらしい仕組みです(現在トライアル版で稼働中)。</p>
+<pre><code>var defer = $.Deferred()
+            .resolve([])
+var piped = defer
 
-<p>配信形式としてPubSubHubbubというプロトコルを用いることで即時性の高い情報配信を行えるようになっています。
-また、配信形式はXMLフォーマットで仕様も公開されているので、別のシステムなどで配信情報を利用するマッシュアップも
-行いやすいように設計されています。</p>
+$.each( urlArray, function( i, url ) {
+    piped = piped.pipe( function(results) {
+        return $.ajax( {
+           url: url
+        } )
+        .pipe( function( data, status, xhr ) {
+            results.push(data)
+        } )
+    } )
+}
 
-<h2>PubhubSubbub</h2>
-
-<p>PubSubHubbubは、Atom, RSSなど記事配信プロトコルの代替仕様として開発されたしくみです。従来用いられていたAtom, RSS
-ではクライアントサイドから定期的に新規情報が無いかを問い合わせるPop形式の情報取得を行うのに対し、PubSubHubbubでは
-サーバーサイドからクライアントサイドへのPush形式で記事更新情報の通知が行われます。
-これによって、クライアントサイドとしては即時性の高い更新情報が得られるというメリットがあり、またサーバーサイドでも
-従来行われていたクライアントからのポーリングアクセスがなくなるので、負荷軽減や通信トラフィック減少というメリットが
-あります。</p>
-
-<p>基本的なしくみとしては下図のようになります。</p>
-
-<p><img src="images/2015-05-27-pubsubhubbub.png" alt="pubsubhubbub" /></p>
-
-<p>記事配信者(Publisher)は更新情報がある場合、あらかじめ配信者側で用意しておいたHubサーバーに通知を行います。
-HubサーバーはPublisherからの通知を受け取ると、これもあらかじめ購読者として登録されているSubscriberサーバーへ
-Push通知を行います。この通知の方法はHTTPアクセスで、リクエスト仕様もプロトコルの一部として決められています。
-このときSubscriberに渡される通知はAtomファイルのみなので、その情報がSubscriberにとって欲しいものであれば、
-Publisherのサーバーにアクセスし詳細な情報を取得するという流れになります。</p>
-
-<p>気象庁による防災関連情報は即時性を高めることでユーザーに対し有益となる類のものが多いため、PubSubHubbub
-プロトコルが採用されています。配信形式の詳しい情報は添付ファイルを参照してください。</p>
-
-<h2>利用の仕組みと利用例</h2>
-
-<p>PubSubHubbubの仕組みをつかって気象庁から情報を取得するしくみはすでに作成済みなので、今後実際に利用する場合は
-取得された情報を受け取りアプリケーションから実際に利用する部分のスクリプトだけを作成すればよいです。
-(という予定ですが、じつはまだ任意のアプリケーション処理を拡張するしくみは整っていません。実際に利用する
-プロジェクトがあればそれなりに急いで作成します)</p>
-
-<p>配信される情報の種類は添付ファイルを参照してください。</p>
-
-<p>ここでは、利用例として「震源・震度に関する情報」から震度マップを作成し、地図と重ねあわせて配信する流れを
-紹介します。</p>
-
-<p><img src="images/2015-05-27-shindomap.png" alt="shindomap" /></p>
-
-<p>「震源・震度に関する情報」は地震発生時に震源、各地震度に関する最終情報として通知される情報です。
-震源震央地名と最終的なマグニチュードと、市区町村レベルまでの各地震度情報が含まれています。</p>
-
-<p><strong><em>地震情報部分</em></strong></p>
-
-<pre><code>&lt;Earthquake&gt;
-&lt;OriginTime&gt;2015-05-25T14:28:00+09:00&lt;/OriginTime&gt;
-&lt;ArrivalTime&gt;2015-05-25T14:28:00+09:00&lt;/ArrivalTime&gt;
-&lt;Hypocenter&gt;
-&lt;Area&gt;
-&lt;Name&gt;埼玉県北部&lt;/Name&gt;
-&lt;Code type="震央地名"&gt;330&lt;/Code&gt;
-&lt;jmx_eb:Coordinate description="北緯３６．１度　東経１３９．６度　深さ　５０ｋｍ" datum="日本測地系"&gt;+36.1+139.6-50000/&lt;/jmx_eb:Coordinate&gt;
-&lt;/Area&gt;
-&lt;/Hypocenter&gt;
-&lt;jmx_eb:Magnitude type="Mj" description="Ｍ５．６"&gt;5.6&lt;/jmx_eb:Magnitude&gt;
-&lt;/Earthquake&gt;
+piped.pipe( function( results ) {
+    $.each( results, function( i, result ) {
+        console.log(result)
+    } )
+} )
 </code></pre>
 
-<p><strong><em>各地震度情報部分</em></strong></p>
+<h4>then()とは何だったのか</h4>
 
-<pre><code>&lt;Intensity&gt;
-&lt;Observation&gt;
-&lt;CodeDefine&gt;
-&lt;Type xpath="Pref/Code"&gt;地震情報／都道府県等&lt;/Type&gt;
-&lt;Type xpath="Pref/Area/Code"&gt;地震情報／細分区域&lt;/Type&gt;
-&lt;Type xpath="Pref/Area/City/Code"&gt;気象・地震・火山情報／市町村等&lt;/Type&gt;
-&lt;Type xpath="Pref/Area/City/IntensityStation/Code"&gt;震度観測点&lt;/Type&gt;
-&lt;/CodeDefine&gt;
-&lt;MaxInt&gt;5-&lt;/MaxInt&gt;
-&lt;Pref&gt;&lt;Name&gt;茨城県&lt;/Name&gt;&lt;Code&gt;08&lt;/Code&gt;&lt;MaxInt&gt;5-&lt;/MaxInt&gt;
-&lt;Area&gt;&lt;Name&gt;茨城県南部&lt;/Name&gt;&lt;Code&gt;301&lt;/Code&gt;&lt;MaxInt&gt;5-&lt;/MaxInt&gt;
-&lt;City&gt;&lt;Name&gt;土浦市&lt;/Name&gt;&lt;Code&gt;0820300&lt;/Code&gt;&lt;MaxInt&gt;5-&lt;/MaxInt&gt;
-&lt;IntensityStation&gt;&lt;Name&gt;土浦市常名&lt;/Name&gt;&lt;Code&gt;0820301&lt;/Code&gt;&lt;Int&gt;5-&lt;/Int&gt;&lt;/IntensityStation&gt;
-&lt;IntensityStation&gt;&lt;Name&gt;土浦市下高津＊&lt;/Name&gt;&lt;Code&gt;0820330&lt;/Code&gt;&lt;Int&gt;4&lt;/Int&gt;&lt;/IntensityStation&gt;
-&lt;/City&gt;
-...
+<p>  jquery ver1.8.3
+  の実装では、pipe()はthen()のエイリアスということになっています。ドキュメントではthen()はむしろdone(), fail(), notify()と互換であるようなことが書かれていますが、then()とdone(), fail(), notify()では戻り値が違うので同じだと思って使うとアレなことになりそうです。</p>
+
+<pre><code>$.Deferred()
+.then( function( arg ) {
+    return "fugafuga"   //次のコールバックに値を与えられる
+} )
+.done( function( arg ) {
+    console.log(arg)
+} )
+.resolve("hogehoge")    //Promiseオブジェクトのresolve()呼び出しはerrorになる
 </code></pre>
-
-<p>情報更新のPush通知をPHPスクリプトで受け取り、このとき通知された情報が「震源・深度に関する情報」であった場合は
-詳細情報のXMLを取得して解析し、データベースに保存します。</p>
-
-<p><img src="images/2015-05-27-erdiagram.png" alt="erdiagram" /></p>
-
-<p>このデータに含まれる各地震度情報には、市区町村名の他に別の行政データでも使われている行政区域コードも&lt;Code&gt;要素として
-含まれています。</p>
-
-<ul>
-<li>Pref(県) → 県コード(2桁)</li>
-<li>Area(地域) → 地域コード(3桁)</li>
-<li>City(市町村) → 市町村コード(7桁だが下2桁は必ず0で実質5桁)</li>
-</ul>
-
-
-<p>この「行政区域コード」は、その他の行政機関から公開されているデータで使っているコードと共通のものとなってい(ることが期待され)ます。
-国土地理院から提供されている行政区域ポリゴンに含まれるコードとは一致していることが確認されたので、
-これらふたつのデータを組み合わせて震度マップを作成します。
-(気象庁XMLの市町村コードの上5桁と国土地理院データのコードが一致、これは一致することを保証する仕様であることを
-担当機関に確認したわけではなく、現在の全データを照合して不一致となるデータが存在しないことを確認しました)</p>
-
-<h2>震度マップ作成手順</h2>
-
-<p>国土数値情報から、「行政区域」データを取得します。</p>
-
-<p><a href="http://nlftp.mlit.go.jp/ksj/">http://nlftp.mlit.go.jp/ksj/</a></p>
-
-<p><img src="images/2015-05-27-gyoseikuiki.png" alt="gyoseikuiki" /></p>
-
-<p>形式はGMLとSHAPEが選択できますが、データベースなどで扱いやすいSHAPEを選択しましょう。</p>
-
-<p>shp形式からPostGISデータへの変換</p>
-
-<pre><code>$ shp2pgsql -s 4612 -W "Shift_JIS" N03-14_140401.shp &gt; N03-14_140401.dump 
-</code></pre>
-
-<p>このデータを、気象庁XMLデータを保存しているデータベースに流し込みます。
-PostGISのインストールがされていなければ、行政区域データを流しこむ前にやっておきます。</p>
-
-<pre><code>$ psql -U postgres jmajihin &lt; N03-14_140401.dump
-</code></pre>
-
-<p>この行政区域ポリゴンデータは、離島や飛び地などのポリゴンがすべて独立したレコードとして登録されているので、
-このままで市町村ごとの震度データを扱っている気象庁データと結合すると、動作が非常に重くなります。
-(市町村数1900に対し、地形ポリゴンは73万レコードを超えます。日本が島国であることを実感させられます)
-あらかじめ、同じ市町村のデータはMultipolygonの同じレコードとして登録しなおしておきましょう。</p>
-
-<pre><code>CREATE TABLE gyoseikuiki (
-    gid INTEGER primary key, 
-    n03_001 VARCHAR(16), 
-    n03_002 VARCHAR(16), 
-    n03_003 VARCHAR(16), 
-    n03_004 VARCHAR(16), 
-    n03_007 VARCHAR(16)
-);
-SELECT addgeometrycolumn('gyoseikuiki', 'the_geom', 4612, 'MULTIPOLYGON', 2);
-
-INSERT INTO gyoseikuiki (
-    gid INTEGER PRIMARY KEY,
-    n03_001 VARCHAR(16),
-    n03_002 VARCHAR(16),
-    n03_003 VARCHAR(16),
-    n03_004 VARCHAR(16),
-    n03_007 VARCHAR(16))
-    SELECT
-        min(gid) AS gid,
-        min(n03_001) AS n03_001,
-        min(n03_002) AS n03_002,
-        min(n03_003) AS n03_003,
-        min(n03_004) AS n03_004,
-        n03_007,
-        ST_Union(geom) AS geom
-        FROM "n03-14_140401"
-    GROUP BY n03_007;
-</code></pre>
-
-<p>最後に、気象庁震度データと行政区域ポリゴンデータを結合したViewを作成します。</p>
-
-<pre><code>CREATE VIEW eq20150408085132 AS
-SELECT g.gid,
-    c.code,
-    c.max_int,
-    g.the_geom
-FROM cities c
-    JOIN areas a ON a.id = c.areas_id
-    JOIN prefectures p ON p.id = a.prefectures_id
-    JOIN events e ON e.id = p.earth_quakes_id
-    JOIN gyoseikuiki g ON (g.n03_007 || '00'::text) = c.code::text
-WHERE e.event_id::text = '20150408085132'::text;
-</code></pre>
-
-<p>このViewを、Geoserverなどの地理データ配信サーバーからWMS形式で配信すれば、OpenlayersやGoogleMapなどの
-マップAPI上で扱えるようになります。</p>
-
-<p><a href="http://54.248.218.93/jmajishin/">http://54.248.218.93/jmajishin/</a></p>
-
-<h2>まとめ</h2>
-
-<p>気象庁防災情報XMLフォーマットから情報を取得し、ユーザーが利用できる形に加工して提供するサービスのサンプルを作成した。</p>
-
-<p>気象庁防災情報XMLフォーマットのよいところ</p>
-
-<ul>
-<li>仕様が公開されたXMLフォーマットによる配信。ユーザーアプリケーションによるマッシュアップが容易である</li>
-<li>即時性の高いPush通知による配信。とくにスマートデバイスなどへの情報通知に強みを発揮するだろう</li>
-<li>他の行政データとの連携も可能な設計となっており、組み合わせて利用することが可能である</li>
-</ul>
-
-
-<p>ただし、現在トライアル版というところがネックで、今後仕様の変更や有料化といった大きな変化がおこる可能性は否めません。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[ほげほげ]]></title>
-    <link href="http://haiiro-shimeji.github.com/blog/2012/12/05/hoge/"/>
-    <updated>2012-12-05T00:00:00+09:00</updated>
-    <id>http://haiiro-shimeji.github.com/blog/2012/12/05/hoge</id>
-    <content type="html"><![CDATA[<p>ほげ</p>
 ]]></content>
   </entry>
   

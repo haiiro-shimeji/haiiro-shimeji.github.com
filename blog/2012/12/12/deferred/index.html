@@ -1,0 +1,454 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>jQuery Deferred の使い方がよくわからない - あきらめがちなブログ</title>
+  <meta name="author" content="haiiro.shimeji">
+
+  
+  <meta name="description" content="jQuery Deferred の使い方がよくわからないので、まったく今更なのですが調べた内容のメモ書きです。 処理を順次実行する (基本的な使い方) 非同期でない普通の処理を順次実行します。この例ではDeferredオブジェクトのありがたみは全くありません。 $.Deferred()
+.done &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://haiiro-shimeji.github.com/blog/2012/12/12/deferred/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="あきらめがちなブログ" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">あきらめがちなブログ</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:haiiro-shimeji.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">jQuery Deferred の使い方がよくわからない</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-12T00:00:00+09:00" pubdate data-updated="true">Dec 12<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>jQuery Deferred の使い方がよくわからないので、まったく今更なのですが調べた内容のメモ書きです。</p>
+
+<h4>処理を順次実行する (基本的な使い方)</h4>
+
+<p>非同期でない普通の処理を順次実行します。この例ではDeferredオブジェクトのありがたみは全くありません。</p>
+
+<pre><code>$.Deferred()
+.done( function( arg ) {
+    console.log("1:" + arg)
+} )
+.done( function( arg ) {
+    console.log("2: " + arg)
+} )
+.resolve("hogehoge")
+</code></pre>
+
+<h4>コールバックの処理結果を次のコールバックに与える</h4>
+
+<p>ただ単に処理を羅列しても面白くもなんともないので、前の処理結果を次の処理に渡して参照します。</p>
+
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function( arg ) {
+    console.log(arg)
+    return "fugafuga"
+} )
+.done( function( arg ) {
+    console.log("1st task returns " + arg)
+} )
+</code></pre>
+
+<p>pipe()に与えたコールバックが返した値は、次のコールバックに渡されます。また、done()はthis返すのに対し、pipe()はthisとは別のPromiseオブジェクトを返します。promiseオブジェクトはresolve(), reject(), promise()などの実行状態を変化させるメソッドが定義されていません。</p>
+
+<p>最初の例ではresolve()をコールバック登録後に読んでいるのに対し上の例では登録前に読んでいます(最後に呼ぶとPromiseオブジェクトに対する呼び出しになってしまうため)が、この順番はあまり関係がありません。resolve()の前に追加されたコールバックでも後に追加されたコールバックでも関係なく登録された順番に実行されていくようになっています。これはDeferredオブジェクトの内部でコールバックを管理している、$.Callbacksオブジェクトの実装によるものです。</p>
+
+<h4>あとから処理を追加する</h4>
+
+<p>一旦実行状態に入ったDeferred Objectにあとからコールバックを追加しても実行されるので、下のようにバックグラウンドのタスクキューみたいな使い方もできます。</p>
+
+<iframe style="width: 100%; height: 300px" src="http://jsfiddle.net/haiiro_shimeji/huQ44/embedded/" allowfullscreen="allowfullscreen" frameborder="0"></iframe>
+
+
+<h4>非同期処理をチェーンする</h4>
+
+<p>pipe()に与えたコールバックからpromiseオブジェクトを返すと、次のコールバックはその実行を待って実行されます。promiseオブジェクトのresolve()の引数に与えた値は、次のコールバックの引数になります。</p>
+
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function( arg ) {
+    return $.ajax( {
+       url: url
+    } )
+ } )
+.done( function( arg ) {
+    console.log(arg)
+} )
+.pipe( function() {
+    return $.Deferred( function(d) {
+        setTimeout( function() { 
+            d.resolve("fugafuga") 
+        }, 1000 )
+    } ).promise()
+} )
+.done( function( arg ) {
+    console.log(arg)    //fugafuga
+} )
+</code></pre>
+
+<p>$.ajax()のjQueryの非同期処理メソッドはだいたい(?)promiseオブジェクトを返すので、pipe()に与えたコールバックの戻り値として返せばよいです。jQuery Deferredと関連のない非同期処理の場合は、3つめのコールバックのように、あとからresolve()またはreject()される予定のpromiseオブジェクトを返します。</p>
+
+<h4>処理が途中で失敗したとき</h4>
+
+<p>ここまでは全てのコールバックが成功する前提で適当に組んでいましたが、人生何もかもうまくいくはずはなく当然処理の失敗というのも考えられます。$.ajax()などの非同期メソッドでは、処理に失敗すると戻り値のpromiseオブジェクトのreject()が呼び出されます (下のコードでは例のために自分で作ったpromiseオブジェクトのreject()を読んでいます)。</p>
+
+<pre><code>$.Deferred()
+.resolve("hogehoge")
+.pipe( function() {
+    return $.Deferred( function(d) {
+        setTimeout( function() {
+            //何らかの理由で失敗してしまった場合、reject()を呼ぶ
+            d.reject("fugafuga") 
+        }, 1000 )
+    } ).promise()
+} )
+.fail( function( arg ) {
+    //reject()が呼び出されたDeferredオブジェクトは、fail()で登録されたコールバックが順次実行される
+} )
+.done( function( arg ) {
+    //done()で登録されたコールバックは実行されない
+} )
+.pipe( 
+    function() {
+        //pipe()の第一引数は成功時コールバック。この場合は呼ばれない
+    },
+    function() {
+        //第二引数は失敗時コールバック。こちらが呼ばれる。
+        return "error message";
+    }
+)
+.fail( function( errorMessage ) {
+    alert( errorMessage )
+} )
+.always( function() {
+    //always()で登録したコールバックは成功失敗いずれの場合にも呼ばれる。
+} )
+</code></pre>
+
+<p>処理が失敗した場合に行う処理はfail()メソッドをつかってコールバック登録します。また、pipe()も第二引数で失敗時コールバックを指定することができます。成功時コールバックと同様に、次の処理に値またはpromiseオブジェクトを引き渡すことができます。また、always()を使うと、同じコールバックをdone()とfail()で同時に登録してくれます。finally処理のように使うことができます。</p>
+
+<h4>処理が途中で失敗したがリカバリして成功ルートに戻る</h4>
+
+<p>上の例では、処理が途中で失敗した場合は成功ルートを踏み外しエラー処理をひたすら行なっていくしかないですが、実際には取得に失敗した値についてデフォルト値を使うなどでリカバリしてそのまま処理を継続したい場合があります。</p>
+
+<pre><code>$.Deferred()
+.resolve()
+.pipe( function() {
+    return $.ajax( {
+        url: "/resource"
+    } )
+} )
+.pipe(
+    function( data ) {
+        return _parse( data )
+    },
+    function() {
+        //取得に失敗した場合はデフォルト値を使い、正常処理をつづける
+        return $.Deferred().resolve( DEFAULT )
+    }
+)
+.done( function( arg ) {
+    //ajaxは失敗したが、pipeされたDeferredオブジェクトでresolve()が呼ばれたので成功ルートに戻った
+} )
+.pipe( 
+    function( data ) {
+        return $.ajax( {
+            url: data
+        } )
+    }
+)
+</code></pre>
+
+<h4>処理をフォークする</h4>
+
+<p>$.when() は複数のPromiseオブジェクトを引数に取り、それら全ての実行終了を待ち合わせるPromiseオブジェクトを返します。下の例では、ふたつのajax通信が成功するとdoneのコールバックに処理が移ります。doneのコールバックには非同期処理の結果が、when()に渡したオブジェクトの順番で引数として与えられます。</p>
+
+<p>いずれかの取得が失敗した場合、ただちにfail()に与えられたコールバックに処理が移ります。このとき他の通信が成功していたとしても全ての結果が取得できない点がポイントです。</p>
+
+<pre><code>$.when( 
+    $.ajax( {
+        url: url1,
+        data: data1
+    } ),
+    $.ajax( {
+        url: url2,
+        data: data2
+    } )
+)
+.done( function( resultFromAjax1, resultFromAjax2 ) {
+        console.log("ajax1 returns " + resultFromAjax1[0])
+        console.log("ajax2 returns " + resultFromAjax2[0])
+} )
+.fail( function( xhr, status, error ) {
+        console.log("failed: " + status)
+} )
+</code></pre>
+
+<p>失敗しても他の結果は取得したい場合はこんな感じですかね。。</p>
+
+<pre><code>$.when( 
+    $.ajax( {
+        url: url1,
+        data: data1
+    } )
+    .pipe(
+        function( result, status, xhr ) { 
+            return $.Deferred().resolve( result, status, xhr ) 
+        },
+        function( xhr, status, error ) {
+            return $.Deferred().resolve( DEFAULT, status, xhr )
+        }
+    ),
+    $.ajax( {
+        url: url2,
+        data: data2
+    } )
+    .pipe(
+    function( result, status, xhr ) { 
+            return $.Deferred().resolve( result, status, xhr ) 
+        },
+        function( xhr, status, error ) {
+            return $.Deferred().resolve( DEFAULT, status, xhr )
+        }
+    )
+)
+.done( function( resultFromAjax1, resultFromAjax2 ) {
+        console.log("ajax1 returns " + resultFromAjax1[0])
+        console.log("ajax2 returns " + resultFromAjax2[0])
+} )
+.fail( function( xhr, status, error ) {
+        console.log("failed: " + status)
+} )
+</code></pre>
+
+<p>重複コードができてしまうので、Promiseオブジェクト生成の部分は $.map() とかを使ってまとめるとよいです。</p>
+
+<h4>非同期処理をいっぱいチェーンする</h4>
+
+<p>$.when() は、ある配列について各要素に対し非同期処理を並列実行します。順次実行したい場合は以下のようにします。</p>
+
+<pre><code>var defer = $.Deferred()
+            .resolve([])
+var piped = defer
+
+$.each( urlArray, function( i, url ) {
+    piped = piped.pipe( function(results) {
+        return $.ajax( {
+           url: url
+        } )
+        .pipe( function( data, status, xhr ) {
+            results.push(data)
+        } )
+    } )
+}
+
+piped.pipe( function( results ) {
+    $.each( results, function( i, result ) {
+        console.log(result)
+    } )
+} )
+</code></pre>
+
+<h4>then()とは何だったのか</h4>
+
+<p>  jquery ver1.8.3
+  の実装では、pipe()はthen()のエイリアスということになっています。ドキュメントではthen()はむしろdone(), fail(), notify()と互換であるようなことが書かれていますが、then()とdone(), fail(), notify()では戻り値が違うので同じだと思って使うとアレなことになりそうです。</p>
+
+<pre><code>$.Deferred()
+.then( function( arg ) {
+    return "fugafuga"   //次のコールバックに値を与えられる
+} )
+.done( function( arg ) {
+    console.log(arg)
+} )
+.resolve("hogehoge")    //Promiseオブジェクトのresolve()呼び出しはerrorになる
+</code></pre>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">haiiro.shimeji</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-12T00:00:00+09:00" pubdate data-updated="true">Dec 12<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://haiiro-shimeji.github.com/blog/2012/12/12/deferred/" data-via="" data-counturl="http://haiiro-shimeji.github.com/blog/2012/12/12/deferred/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+      
+        <a class="basic-alignment right" href="/blog/2013/01/10/phonegap_openlayers/" title="Next Post: PhoneGap+OpenLayersでAndroid用地図アプリを作成する">PhoneGap+OpenLayersでAndroid用地図アプリを作成する &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/09/28/cordova_plugin/">Phonegapアプリケーションにネイティブコードを追加する(Android)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/01/ionic_etcetc/">Yeomanで作ったIonic+AngularJS+PhoneGapなWebアプリのKarma+mocha+chaiなテストをJenkinsで実行するよ！</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/06/25/geoserver_scala/">Geoserver extensionをScalaで作成する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/01/10/phonegap_openlayers/">PhoneGap+OpenLayersでAndroid用地図アプリを作成する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/12/12/deferred/">jQuery Deferred の使い方がよくわからない</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - haiiro.shimeji -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
