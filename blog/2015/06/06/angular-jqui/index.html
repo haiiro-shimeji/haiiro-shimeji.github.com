@@ -1,0 +1,403 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>AngularJSから他ライブラリの利用 - My Octopress Blog</title>
+  <meta name="author" content="Your Name">
+
+  
+  <meta name="description" content="このエントリは、Developer summit 2015 のセッション
+"AngularJSの今とこれから - フロントエンドエンジニア座談会（仮）"の
+レポートです。 AngularJSサンプルアプリケーションの構築 AngularJSプロジェクトの初期構築にはyeomanの利用が便利です。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://haiiro-shimeji.github.com/blog/2015/06/06/angular-jqui/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="My Octopress Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">My Octopress Blog</a></h1>
+  
+    <h2>A blogging framework for hackers.</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:haiiro-shimeji.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">AngularJSから他ライブラリの利用</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-06-06T00:00:00+09:00" pubdate data-updated="true">Jun 6<span>th</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>このエントリは、Developer summit 2015 のセッション
+"AngularJSの今とこれから - フロントエンドエンジニア座談会（仮）"の
+レポートです。</p>
+
+<h2>AngularJSサンプルアプリケーションの構築</h2>
+
+<p>AngularJSプロジェクトの初期構築にはyeomanの利用が便利です。
+まず、npmがインストールされているという前提で、yeoman および
+AngularJSプロジェクトテンプレートのインストールを行います。</p>
+
+<pre><code>$ npm install -g yo generator-angular grunt-cli bower
+</code></pre>
+
+<p>つぎに、yeomanでテンプレートからAngularJSプロジェクトを作成します。</p>
+
+<pre><code>$ mkdir sampleApp; cd sampleApp
+$ yo angular
+</code></pre>
+
+<p>作成されたプロジェクトでは、すでにいい感じのGruntfileが用意されており、
+デバッグサーバーの立ち上げが可能です。</p>
+
+<pre><code>$ grunt serve
+</code></pre>
+
+<p>これで localhost:9001 にアクセスすればプロジェクトのプレビューが閲覧できます。</p>
+
+<h2>AngularJSとReactive</h2>
+
+<p>従来のフロントエンドフレームワークと比べたAngularJSの特徴は、Reactiveのしくみです。
+たとえば、「ユーザーがテキストフィールドに入力した文字列を画面に反映する」という
+機能をjQueryで実装しようとした場合、以下のようになるかと思います。</p>
+
+<p>HTML</p>
+
+<pre><code>&lt;div&gt;
+    &lt;input id="input"&gt;
+    &lt;p id="result"&gt;&lt;/p&gt;
+&lt;/div&gt;
+</code></pre>
+
+<p>Javascript</p>
+
+<pre><code>$('#input').change(function() {
+  $('#result').text($(this).val());
+});
+</code></pre>
+
+<p>これに対し、AngularJSではつぎのように実装することができます。</p>
+
+<pre><code>&lt;div ng-init="a = 'hoge'"&gt;
+    &lt;input id="input" ng-model="a"&gt;
+    &lt;p id="result"&gt;{{a}}&lt;/p&gt;
+&lt;/div&gt;
+</code></pre>
+
+<p>このように、Reactiveのしくみを使うことで、このような処理で従来必要であった
+Javascriptを記述する必要が無くなります。
+この機能でやらなければならない処理は、「入力フィールドの変更を検知し」
+「入力内容を画面に反映する」ということですが、これをフレームワークの機能として
+提供し、ユーザーは変数である「入力値」の定義を行うだけで実現できるように
+したのが、Reactiveです。
+この入力値や変数の画面への反映という処理を従来通りに記述すると、
+フロントエンド側のプログラムのかなりの部分を占めることになります。
+これをフレームワークに負わせることにより、アプリケーションコードの縮小、
+メンテナンスコストの低減が期待できます。</p>
+
+<h2>AngularJSから別のライブラリの利用</h2>
+
+<p>で、ここからが本題ですが、デブサミのセッションで「jQuery UIなどの外部ライブラリを
+AngularJS、とりわけReactiveのしくみのなかで扱おうとするのは鬼門である」という
+コメントがありました。</p>
+
+<p>なので、本当に鬼門なのか実際にやってみます。</p>
+
+<p>ここでは、jQuery UIのDatepickerをAngularJSっぽく使えるようにするDirectiveを
+新規実装してみます。AngularJSっぽく使えるDirectiveとは、Template HTML中で
+つぎのように使えるよう実装することです。</p>
+
+<pre><code>&lt;div calendar value="date"&gt;&lt;/div&gt;
+&lt;p&gt;{{date}}&lt;/p&gt;
+</code></pre>
+
+<p>"calendar"属性がついたdiv要素がjQuery UIのDatepickerに置換して表示され、
+その中で変更された日付変数が下のp要素中に自動で表示されるようにします。</p>
+
+<p>calendar属性のついた要素がDatepickerに置換されるようにするには、つぎのように
+Directiveを実装します。</p>
+
+<pre><code>'use strict';
+
+angular.module('jquiSampleApp')
+.directive('calendar', function() {
+  return {
+    link: function($scope, $element) {
+      $element.find('input').datepicker();
+    },
+    template: '&lt;p&gt;Date: &lt;input type="text"&gt;&lt;/p&gt;',
+    scope: {
+      value: '='
+    }
+  };
+});
+</code></pre>
+
+<p>しかし、これではjQuery UIで変更された値をView側の変数に反映するコードが
+無いので、それを追加する必要があります。
+これには入力に変更があったときに $scope.value を変更すればよいのですが、</p>
+
+<pre><code>$element.find('input')
+.change(function() {
+    var s = $(this).val().split('/');
+    var m = parseInt(s[0] - 1);
+    var d = parseInt(s[1]);
+    var y = parseInt(s[2]);
+    $scope.value = new Date(y, m, d);
+});
+</code></pre>
+
+<p>と普通にやっても画面上に変更が反映されません。
+(正確には反映されないわけではなく、別のAngularJS上のイベントが発生したときに
+反映されます。)</p>
+
+<p>View変数の変更を画面に反映する処理は、"digest loop"という処理の中で発生します。
+digest loopは、画面上のUIイベントが発生したタイミングで開始され、AngularJSが
+定義しているイベントハンドラ(ng-clickとか)の呼び出しを行い、その後View変数の
+変更をチェックして必要があれば画面への反映を行います。
+このため、通常通りclick属性などで定義したイベントハンドラはdigest loop
+の外で処理されることになるので、その中で行われたView変数の変更は画面表示には
+すぐに反映されず、つぎのdigest loopの実行時まで待たなければならない、ということになります。
+これは、jQuery UIに限らず独自のイベントハンドラをセットして使っているライブラリを
+AngularJS中で扱おうとしたときに常に注意が必要ということになります。</p>
+
+<p>digest loopを任意に呼び出して画面への反映を行うには、以下のようにします。</p>
+
+<pre><code>$element.find('input')
+.change(function() {
+    $scope.$apply(function() {
+        var s = $(this).val().split('/');
+        var m = parseInt(s[0] - 1);
+        var d = parseInt(s[1]);
+        var y = parseInt(s[2]);
+        $scope.value = new Date(y, m, d);
+    });
+});
+</code></pre>
+
+<p>$scope.$apply() はその場でdigest loopを呼び出し、その中の処理として引数で与えられた関数を
+実行します。</p>
+
+<p>注意しなければならないのは、この$scope.$apply()関数をdigest loop中で呼び出すとエラーが発生
+するという点です。確実にdigest loopの外で呼ばれるよう、イベントハンドラの中で直接呼ぶように
+したほうが無難です。</p>
+
+<p>さて、これで入力フィールドの変更内容が画面に反映され、完成と言いたいところですが、まだ一点
+問題が残っています。入力フィールド以外から変数が変更された際に入力フィールドに値が反映されない
+という点です。</p>
+
+<p>外部ライブラリを扱う際は、変数の変更を自分で検知して入力フィールドに反映させる処理を
+書く必要があります。</p>
+
+<pre><code>  $scope.$watch('value', function(value) {
+    var dateStr = (value.getMonth() + 1)
+          + '/' + value.getDate()
+          + '/' + value.getFullYear();
+    $element.find('input').val(dateStr);
+  }, true);
+</code></pre>
+
+<p>$scope.$watch()はView変数を監視し、変更があった際に指定したコールバックを実行するよう設定する
+関数です。
+第3引数は、監視対象の変数オブジェクトのメンバーの変更を再帰的に監視するかどうかのフラグです。
+これをfalseまたは未指定にすると、setDate()メソッドなどによりDate型変数の内容が変更されただけでは
+コールバックが呼び出されず、再代入が行われた時にだけ実行される、ということになります。
+しかし巨大なオブジェクトを再帰的に監視するという場合は処理コストがかなりかかることが懸念されるので、
+できればプリミティブ型の変数をnon-recursiveで監視したほうが無難かと思います。</p>
+
+<p>以上が外部ライブラリをAngularJSで扱う場合の流れになります。実装は不可能ではありませんが、
+結構めんどくさく、しかも途中で $scope.$watch を使わざるをえないというところでパフォーマンス的な
+懸念もあります。</p>
+
+<p>DatepickerならばjQueryを使わずともangular-bootstrapなどですでにAngularJSベースで開発された
+コンポーネントが存在するので、そちらを使ったほうが無難です。
+jQueryUIコンポーネントのwrapをしたものも出回っていますが、先に述べたようにパフォーマンスの懸念が
+あるのと、入出力双方まで対応していないなど微妙な実装のものもあるので、できればあまり使わない
+ほうがいい、という印象です。</p>
+
+<p>しかし、マイナーなライブラリをAngularJS上で扱いたい場合は独自にwrapperを作成しなければ
+ならない、ということもあります。その際には上記のようなところを注意すると良いと思います。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Your Name</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-06-06T00:00:00+09:00" pubdate data-updated="true">Jun 6<span>th</span>, 2015</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://haiiro-shimeji.github.com/blog/2015/06/06/angular-jqui/" data-via="" data-counturl="http://haiiro-shimeji.github.com/blog/2015/06/06/angular-jqui/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/05/27/bousaixml/" title="Previous Post: 気象庁防災情報XMLフォーマットの利活用">&laquo; 気象庁防災情報XMLフォーマットの利活用</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2015/07/07/phonegap/" title="Next Post: Cordovaからハードウェア機能を利用する">Cordovaからハードウェア機能を利用する &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/09/04/git-branch/">Git Branch</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/02/git-flow/">gitのブランチ運用とgit flow</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/08/12/autoprefixer/">CSS3のクロスブラウザサポートを支援するAutoprefixer</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/07/20/grunt-php/">ビルドツールGrunt.jsをPHP開発で利用する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/07/07/phonegap/">Cordovaからハードウェア機能を利用する</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Your Name -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

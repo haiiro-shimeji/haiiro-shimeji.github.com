@@ -1,0 +1,404 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>気象庁防災情報XMLフォーマットの利活用 - My Octopress Blog</title>
+  <meta name="author" content="Your Name">
+
+  
+  <meta name="description" content="気象庁防災情報XMLフォーマットは、気象庁から配信する防災関連情報のあたらしい仕組みです(現在トライアル版で稼働中)。 配信形式としてPubSubHubbubというプロトコルを用いることで即時性の高い情報配信を行えるようになっています。
+また、配信形式はXMLフォーマットで仕様も公開されているので &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://haiiro-shimeji.github.com/blog/2015/05/27/bousaixml/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="My Octopress Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">My Octopress Blog</a></h1>
+  
+    <h2>A blogging framework for hackers.</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:haiiro-shimeji.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">気象庁防災情報XMLフォーマットの利活用</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-05-27T00:00:00+09:00" pubdate data-updated="true">May 27<span>th</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>気象庁防災情報XMLフォーマットは、気象庁から配信する防災関連情報のあたらしい仕組みです(現在トライアル版で稼働中)。</p>
+
+<p>配信形式としてPubSubHubbubというプロトコルを用いることで即時性の高い情報配信を行えるようになっています。
+また、配信形式はXMLフォーマットで仕様も公開されているので、別のシステムなどで配信情報を利用するマッシュアップも
+行いやすいように設計されています。</p>
+
+<h2>PubhubSubbub</h2>
+
+<p>PubSubHubbubは、Atom, RSSなど記事配信プロトコルの代替仕様として開発されたしくみです。従来用いられていたAtom, RSS
+ではクライアントサイドから定期的に新規情報が無いかを問い合わせるPop形式の情報取得を行うのに対し、PubSubHubbubでは
+サーバーサイドからクライアントサイドへのPush形式で記事更新情報の通知が行われます。
+これによって、クライアントサイドとしては即時性の高い更新情報が得られるというメリットがあり、またサーバーサイドでも
+従来行われていたクライアントからのポーリングアクセスがなくなるので、負荷軽減や通信トラフィック減少というメリットが
+あります。</p>
+
+<p>基本的なしくみとしては下図のようになります。</p>
+
+<p><img src="images/2015-05-27-pubsubhubbub.png" alt="pubsubhubbub" /></p>
+
+<p>記事配信者(Publisher)は更新情報がある場合、あらかじめ配信者側で用意しておいたHubサーバーに通知を行います。
+HubサーバーはPublisherからの通知を受け取ると、これもあらかじめ購読者として登録されているSubscriberサーバーへ
+Push通知を行います。この通知の方法はHTTPアクセスで、リクエスト仕様もプロトコルの一部として決められています。
+このときSubscriberに渡される通知はAtomファイルのみなので、その情報がSubscriberにとって欲しいものであれば、
+Publisherのサーバーにアクセスし詳細な情報を取得するという流れになります。</p>
+
+<p>気象庁による防災関連情報は即時性を高めることでユーザーに対し有益となる類のものが多いため、PubSubHubbub
+プロトコルが採用されています。配信形式の詳しい情報は添付ファイルを参照してください。</p>
+
+<h2>利用の仕組みと利用例</h2>
+
+<p>PubSubHubbubの仕組みをつかって気象庁から情報を取得するしくみはすでに作成済みなので、今後実際に利用する場合は
+取得された情報を受け取りアプリケーションから実際に利用する部分のスクリプトだけを作成すればよいです。
+(という予定ですが、じつはまだ任意のアプリケーション処理を拡張するしくみは整っていません。実際に利用する
+プロジェクトがあればそれなりに急いで作成します)</p>
+
+<p>配信される情報の種類は添付ファイルを参照してください。</p>
+
+<p>ここでは、利用例として「震源・震度に関する情報」から震度マップを作成し、地図と重ねあわせて配信する流れを
+紹介します。</p>
+
+<p><img src="images/2015-05-27-shindomap.png" alt="shindomap" /></p>
+
+<p>「震源・震度に関する情報」は地震発生時に震源、各地震度に関する最終情報として通知される情報です。
+震源震央地名と最終的なマグニチュードと、市区町村レベルまでの各地震度情報が含まれています。</p>
+
+<p><strong><em>地震情報部分</em></strong></p>
+
+<pre><code>&lt;Earthquake&gt;
+&lt;OriginTime&gt;2015-05-25T14:28:00+09:00&lt;/OriginTime&gt;
+&lt;ArrivalTime&gt;2015-05-25T14:28:00+09:00&lt;/ArrivalTime&gt;
+&lt;Hypocenter&gt;
+&lt;Area&gt;
+&lt;Name&gt;埼玉県北部&lt;/Name&gt;
+&lt;Code type="震央地名"&gt;330&lt;/Code&gt;
+&lt;jmx_eb:Coordinate description="北緯３６．１度　東経１３９．６度　深さ　５０ｋｍ" datum="日本測地系"&gt;+36.1+139.6-50000/&lt;/jmx_eb:Coordinate&gt;
+&lt;/Area&gt;
+&lt;/Hypocenter&gt;
+&lt;jmx_eb:Magnitude type="Mj" description="Ｍ５．６"&gt;5.6&lt;/jmx_eb:Magnitude&gt;
+&lt;/Earthquake&gt;
+</code></pre>
+
+<p><strong><em>各地震度情報部分</em></strong></p>
+
+<pre><code>&lt;Intensity&gt;
+&lt;Observation&gt;
+&lt;CodeDefine&gt;
+&lt;Type xpath="Pref/Code"&gt;地震情報／都道府県等&lt;/Type&gt;
+&lt;Type xpath="Pref/Area/Code"&gt;地震情報／細分区域&lt;/Type&gt;
+&lt;Type xpath="Pref/Area/City/Code"&gt;気象・地震・火山情報／市町村等&lt;/Type&gt;
+&lt;Type xpath="Pref/Area/City/IntensityStation/Code"&gt;震度観測点&lt;/Type&gt;
+&lt;/CodeDefine&gt;
+&lt;MaxInt&gt;5-&lt;/MaxInt&gt;
+&lt;Pref&gt;&lt;Name&gt;茨城県&lt;/Name&gt;&lt;Code&gt;08&lt;/Code&gt;&lt;MaxInt&gt;5-&lt;/MaxInt&gt;
+&lt;Area&gt;&lt;Name&gt;茨城県南部&lt;/Name&gt;&lt;Code&gt;301&lt;/Code&gt;&lt;MaxInt&gt;5-&lt;/MaxInt&gt;
+&lt;City&gt;&lt;Name&gt;土浦市&lt;/Name&gt;&lt;Code&gt;0820300&lt;/Code&gt;&lt;MaxInt&gt;5-&lt;/MaxInt&gt;
+&lt;IntensityStation&gt;&lt;Name&gt;土浦市常名&lt;/Name&gt;&lt;Code&gt;0820301&lt;/Code&gt;&lt;Int&gt;5-&lt;/Int&gt;&lt;/IntensityStation&gt;
+&lt;IntensityStation&gt;&lt;Name&gt;土浦市下高津＊&lt;/Name&gt;&lt;Code&gt;0820330&lt;/Code&gt;&lt;Int&gt;4&lt;/Int&gt;&lt;/IntensityStation&gt;
+&lt;/City&gt;
+...
+</code></pre>
+
+<p>情報更新のPush通知をPHPスクリプトで受け取り、このとき通知された情報が「震源・深度に関する情報」であった場合は
+詳細情報のXMLを取得して解析し、データベースに保存します。</p>
+
+<p><img src="images/2015-05-27-erdiagram.png" alt="erdiagram" /></p>
+
+<p>このデータに含まれる各地震度情報には、市区町村名の他に別の行政データでも使われている行政区域コードも&lt;Code&gt;要素として
+含まれています。</p>
+
+<ul>
+<li>Pref(県) → 県コード(2桁)</li>
+<li>Area(地域) → 地域コード(3桁)</li>
+<li>City(市町村) → 市町村コード(7桁だが下2桁は必ず0で実質5桁)</li>
+</ul>
+
+
+<p>この「行政区域コード」は、その他の行政機関から公開されているデータで使っているコードと共通のものとなってい(ることが期待され)ます。
+国土地理院から提供されている行政区域ポリゴンに含まれるコードとは一致していることが確認されたので、
+これらふたつのデータを組み合わせて震度マップを作成します。
+(気象庁XMLの市町村コードの上5桁と国土地理院データのコードが一致、これは一致することを保証する仕様であることを
+担当機関に確認したわけではなく、現在の全データを照合して不一致となるデータが存在しないことを確認しました)</p>
+
+<h2>震度マップ作成手順</h2>
+
+<p>国土数値情報から、「行政区域」データを取得します。</p>
+
+<p><a href="http://nlftp.mlit.go.jp/ksj/">http://nlftp.mlit.go.jp/ksj/</a></p>
+
+<p><img src="images/2015-05-27-gyoseikuiki.png" alt="gyoseikuiki" /></p>
+
+<p>形式はGMLとSHAPEが選択できますが、データベースなどで扱いやすいSHAPEを選択しましょう。</p>
+
+<p>shp形式からPostGISデータへの変換</p>
+
+<pre><code>$ shp2pgsql -s 4612 -W "Shift_JIS" N03-14_140401.shp &gt; N03-14_140401.dump 
+</code></pre>
+
+<p>このデータを、気象庁XMLデータを保存しているデータベースに流し込みます。
+PostGISのインストールがされていなければ、行政区域データを流しこむ前にやっておきます。</p>
+
+<pre><code>$ psql -U postgres jmajihin &lt; N03-14_140401.dump
+</code></pre>
+
+<p>この行政区域ポリゴンデータは、離島や飛び地などのポリゴンがすべて独立したレコードとして登録されているので、
+このままで市町村ごとの震度データを扱っている気象庁データと結合すると、動作が非常に重くなります。
+(市町村数1900に対し、地形ポリゴンは73万レコードを超えます。日本が島国であることを実感させられます)
+あらかじめ、同じ市町村のデータはMultipolygonの同じレコードとして登録しなおしておきましょう。</p>
+
+<pre><code>CREATE TABLE gyoseikuiki (
+    gid INTEGER primary key, 
+    n03_001 VARCHAR(16), 
+    n03_002 VARCHAR(16), 
+    n03_003 VARCHAR(16), 
+    n03_004 VARCHAR(16), 
+    n03_007 VARCHAR(16)
+);
+SELECT addgeometrycolumn('gyoseikuiki', 'the_geom', 4612, 'MULTIPOLYGON', 2);
+
+INSERT INTO gyoseikuiki (
+    gid INTEGER PRIMARY KEY,
+    n03_001 VARCHAR(16),
+    n03_002 VARCHAR(16),
+    n03_003 VARCHAR(16),
+    n03_004 VARCHAR(16),
+    n03_007 VARCHAR(16))
+    SELECT
+        min(gid) AS gid,
+        min(n03_001) AS n03_001,
+        min(n03_002) AS n03_002,
+        min(n03_003) AS n03_003,
+        min(n03_004) AS n03_004,
+        n03_007,
+        ST_Union(geom) AS geom
+        FROM "n03-14_140401"
+    GROUP BY n03_007;
+</code></pre>
+
+<p>最後に、気象庁震度データと行政区域ポリゴンデータを結合したViewを作成します。</p>
+
+<pre><code>CREATE VIEW eq20150408085132 AS
+SELECT g.gid,
+    c.code,
+    c.max_int,
+    g.the_geom
+FROM cities c
+    JOIN areas a ON a.id = c.areas_id
+    JOIN prefectures p ON p.id = a.prefectures_id
+    JOIN events e ON e.id = p.earth_quakes_id
+    JOIN gyoseikuiki g ON (g.n03_007 || '00'::text) = c.code::text
+WHERE e.event_id::text = '20150408085132'::text;
+</code></pre>
+
+<p>このViewを、Geoserverなどの地理データ配信サーバーからWMS形式で配信すれば、OpenlayersやGoogleMapなどの
+マップAPI上で扱えるようになります。</p>
+
+<p><a href="http://54.248.218.93/jmajishin/">http://54.248.218.93/jmajishin/</a></p>
+
+<h2>まとめ</h2>
+
+<p>気象庁防災情報XMLフォーマットから情報を取得し、ユーザーが利用できる形に加工して提供するサービスのサンプルを作成した。</p>
+
+<p>気象庁防災情報XMLフォーマットのよいところ</p>
+
+<ul>
+<li>仕様が公開されたXMLフォーマットによる配信。ユーザーアプリケーションによるマッシュアップが容易である</li>
+<li>即時性の高いPush通知による配信。とくにスマートデバイスなどへの情報通知に強みを発揮するだろう</li>
+<li>他の行政データとの連携も可能な設計となっており、組み合わせて利用することが可能である</li>
+</ul>
+
+
+<p>ただし、現在トライアル版というところがネックで、今後仕様の変更や有料化といった大きな変化がおこる可能性は否めません。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Your Name</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-05-27T00:00:00+09:00" pubdate data-updated="true">May 27<span>th</span>, 2015</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://haiiro-shimeji.github.com/blog/2015/05/27/bousaixml/" data-via="" data-counturl="http://haiiro-shimeji.github.com/blog/2015/05/27/bousaixml/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/12/05/hoge/" title="Previous Post: ほげほげ">&laquo; ほげほげ</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2015/06/06/angular-jqui/" title="Next Post: AngularJSから他ライブラリの利用">AngularJSから他ライブラリの利用 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/09/04/git-branch/">Git Branch</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/02/git-flow/">gitのブランチ運用とgit flow</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/08/12/autoprefixer/">CSS3のクロスブラウザサポートを支援するAutoprefixer</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/07/20/grunt-php/">ビルドツールGrunt.jsをPHP開発で利用する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/07/07/phonegap/">Cordovaからハードウェア機能を利用する</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Your Name -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
